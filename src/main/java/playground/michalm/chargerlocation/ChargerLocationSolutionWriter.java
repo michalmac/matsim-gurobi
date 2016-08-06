@@ -21,6 +21,7 @@ package playground.michalm.chargerlocation;
 
 import java.util.List;
 
+import org.matsim.api.core.v01.BasicLocation;
 import org.matsim.contrib.util.CompactCSVWriter;
 import org.matsim.core.utils.io.IOUtils;
 
@@ -45,7 +46,7 @@ public class ChargerLocationSolutionWriter
 
     public void writeChargers(String file)
     {
-        List<ChargerLocation> locations = problem.chargerData.locations;
+        List<? extends BasicLocation<?>> locations = problem.chargerData.locations;
 
         try (CompactCSVWriter writer = new CompactCSVWriter(IOUtils.getBufferedWriter(file))) {
             for (int j = 0; j < problem.J; j++) {
@@ -61,16 +62,16 @@ public class ChargerLocationSolutionWriter
 
     public void writeFlows(String file)
     {
-        List<ZoneData.Entry> zoneEntries = problem.zoneData.entries;
-        List<ChargerLocation> locations = problem.chargerData.locations;
+        List<? extends DemandData.Entry<?>> demandEntries = problem.demandData.entries;
+        List<? extends BasicLocation<?>> chargerLocations = problem.chargerData.locations;
 
         try (CompactCSVWriter writer = new CompactCSVWriter(IOUtils.getBufferedWriter(file))) {
             for (int i = 0; i < problem.I; i++) {
                 for (int j = 0; j < problem.J; j++) {
                     if (solution.f[i][j] >= MIN_FLOW_LIMIT) {
                         writer.writeNext(//
-                                zoneEntries.get(i).zone.getId() + "", //
-                                locations.get(j).getId() + "", //
+                                demandEntries.get(i).location.getId() + "", //
+                                chargerLocations.get(j).getId() + "", //
                                 solution.f[i][j] + "");
                     }
                 }

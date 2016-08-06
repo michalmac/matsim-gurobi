@@ -96,7 +96,7 @@ public class ChargerLocationSolver
     {
         xVar = new GRBVar[problem.J];
         for (int j = 0; j < problem.J; j++) {
-            xVar[j] = model.addVar(0, problem.maxChargersInZone, 0, GRB.INTEGER, "x_" + j);
+            xVar[j] = model.addVar(0, problem.maxChargersAtLocation, 0, GRB.INTEGER, "x_" + j);
         }
     }
 
@@ -106,11 +106,10 @@ public class ChargerLocationSolver
     {
         fVar = new GRBVar[problem.I][problem.J];
         for (int i = 0; i < problem.I; i++) {
-            double potential_i = problem.zoneData.entries.get(i).potential;
+            double demand_i = problem.demandData.entries.get(i).demand;
 
             for (int j = 0; j < problem.J; j++) {
-                double maxFlow_ij = problem.distances[i][j] > problem.maxDistance ? 0 : //
-                        potential_i * problem.zoneData.potentialToEnergy;
+                double maxFlow_ij = problem.distances[i][j] > problem.maxDistance ? 0 : demand_i;
                 fVar[i][j] = model.addVar(0, maxFlow_ij, 0, GRB.CONTINUOUS, "f_" + i + "," + j);
             }
         }
@@ -143,9 +142,7 @@ public class ChargerLocationSolver
                 expr.addTerm(1, fVar[i][j]);
             }
 
-            double demand_i = problem.zoneData.entries.get(i).potential
-                    * problem.zoneData.potentialToEnergy;
-
+            double demand_i = problem.demandData.entries.get(i).demand;
             model.addConstr(expr, GRB.EQUAL, demand_i, "demand_" + i);
         }
     }
@@ -161,9 +158,7 @@ public class ChargerLocationSolver
                 expr.addTerm(1, fVar[i][j]);
             }
 
-            double supply_j = problem.chargerData.locations.get(j).getPower() * problem.hours;
-            expr.addTerm(-supply_j, xVar[j]);
-
+            expr.addTerm(-problem.potentialSatisfiedByCharger, xVar[j]);
             model.addConstr(expr, GRB.LESS_EQUAL, 0, "supply_" + j);
         }
     }

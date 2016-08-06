@@ -19,41 +19,39 @@
 
 package playground.michalm.chargerlocation;
 
+import java.util.*;
+
 import org.matsim.api.core.v01.*;
 
 
-public class ChargerLocation
-    implements BasicLocation<ChargerLocation>
+public class DemandData<D extends BasicLocation<D>>
 {
-    private final Id<ChargerLocation> id;
-    private final Coord coord;
-    private final double power;
-
-
-    public ChargerLocation(Id<ChargerLocation> id, Coord coord, double power)
+    public static class Entry<D extends BasicLocation<D>>
     {
-        this.id = id;
-        this.coord = coord;
-        this.power = power;
+        public final D location;
+        public final double demand;
+
+
+        public Entry(D location, double demand)
+        {
+            this.location = location;
+            this.demand = demand;
+        }
     }
 
 
-    @Override
-    public Id<ChargerLocation> getId()
+    public final List<Entry<D>> entries = new ArrayList<>();
+    public final double totalDemand;
+
+
+    public DemandData(Iterable<D> locations, Map<Id<D>, Double> locationPotentials)
     {
-        return id;
-    }
-
-
-    @Override
-    public Coord getCoord()
-    {
-        return coord;
-    }
-
-
-    public double getPower()
-    {
-        return power;
+        double potentialSum = 0;
+        for (D l : locations) {
+            double p = locationPotentials.get(l.getId());
+            entries.add(new Entry<>(l, p));
+            potentialSum += p;
+        }
+        totalDemand = potentialSum;
     }
 }

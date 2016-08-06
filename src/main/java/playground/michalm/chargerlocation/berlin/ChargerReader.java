@@ -17,7 +17,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package playground.michalm.chargerlocation;
+package playground.michalm.chargerlocation.berlin;
 
 import java.io.*;
 import java.util.Map;

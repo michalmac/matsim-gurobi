@@ -19,8 +19,8 @@
 
 package playground.michalm.chargerlocation;
 
+import org.matsim.api.core.v01.BasicLocation;
 import org.matsim.contrib.util.distance.DistanceCalculator;
-import org.matsim.contrib.zone.Zone;
 
 
 public class ChargerLocationProblem
@@ -39,12 +39,13 @@ public class ChargerLocationProblem
     }
 
 
-    public final ZoneData zoneData;
-    public final ChargerData chargerData;
-    public final DistanceCalculator distanceCalculator;
-    public final double hours;
+    public final DemandData<?> demandData;
+    public final ChargerLocationData<?> chargerData;
+    
+    public final double potentialSatisfiedByCharger;
+
     public final double maxDistance;
-    public final int maxChargersInZone;
+    public final int maxChargersAtLocation;
     public final int maxChargers;
 
     public final int I;
@@ -53,35 +54,39 @@ public class ChargerLocationProblem
     public final double[][] distances;
 
 
-    public ChargerLocationProblem(ZoneData zoneData, ChargerData chargerData,
-            DistanceCalculator distanceCalculator, double hours, double maxDistance, int maxChargersInZone,
-            int maxChargers)
+    public ChargerLocationProblem(DemandData<?> demandData, ChargerLocationData<?> chargerData,
+            DistanceCalculator distanceCalculator, double hours, double chargePower,
+            double totalEnergyRequired, double oversupply, double maxDistance,
+            int maxChargersAtLocation)
     {
-        this.zoneData = zoneData;
+        this.demandData = demandData;
         this.chargerData = chargerData;
-        this.distanceCalculator = distanceCalculator;
         
-        this.hours = hours;
-        this.maxChargersInZone = maxChargersInZone;
-        this.maxDistance = maxDistance;
-        this.maxChargers = maxChargers;
+        double energyProducedByCharger = hours * chargePower;
+        double energyRequiredPerPotential = totalEnergyRequired / demandData.totalDemand;
+        potentialSatisfiedByCharger = energyProducedByCharger / energyRequiredPerPotential;
 
-        I = zoneData.entries.size();
+        this.maxChargersAtLocation = maxChargersAtLocation;
+        this.maxDistance = maxDistance;
+        maxChargers = (int)Math.ceil(oversupply * totalEnergyRequired / energyProducedByCharger);
+
+        I = demandData.entries.size();
         J = chargerData.locations.size();
 
-        distances = calcDistanceMatrix();
+        distances = calcDistanceMatrix(distanceCalculator);
     }
 
 
-    private double[][] calcDistanceMatrix()
+    private double[][] calcDistanceMatrix(DistanceCalculator distanceCalculator)
     {
         double[][] d = new double[I][J];
         for (int i = 0; i < I; i++) {
-            Zone zone_i = zoneData.entries.get(i).zone;
+            BasicLocation<?> demandLocation_i = demandData.entries.get(i).location;
 
             for (int j = 0; j < J; j++) {
-                ChargerLocation location_j = chargerData.locations.get(j);
-                d[i][j] = distanceCalculator.calcDistance(zone_i.getCoord(), location_j.getCoord());
+                BasicLocation<?> location_j = chargerData.locations.get(j);
+                d[i][j] = distanceCalculator.calcDistance(demandLocation_i.getCoord(),
+                        location_j.getCoord());
             }
         }
         return d;

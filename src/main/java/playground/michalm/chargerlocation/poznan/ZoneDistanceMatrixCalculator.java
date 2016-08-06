@@ -46,19 +46,19 @@ public class ZoneDistanceMatrixCalculator
 
         String matrixFile = "d:/PP-rad/poznan/test/distances_";
 
-        ChargerLocation[] LOCATIONS = {
-                ChargerLocations.createLocation(1, 629375.526287495, 5807049.09624582, 0),
-                ChargerLocations.createLocation(2, 627667.270111601, 5806032.00666041, 0),
-                ChargerLocations.createLocation(3, 629858.161036597, 5807986.09770554, 0),
-                ChargerLocations.createLocation(4, 627670.750480261, 5808514.98110016, 0),
-                ChargerLocations.createLocation(5, 628931.787064244, 5808428.14220098, 0),
-                ChargerLocations.createLocation(6, 632665.914282043, 5806912.26666199, 0),
-                ChargerLocations.createLocation(7, 631414.841065603, 5808351.76701608, 0),
-                ChargerLocations.createLocation(8, 631350.921863240, 5807870.60505818, 0),
-                ChargerLocations.createLocation(9, 631357.194136764, 5810714.22475246, 0),
-                ChargerLocations.createLocation(10, 631256.667354371, 5811489.93034689, 0),
-                ChargerLocations.createLocation(11, 630810.948612502, 5812932.31900434, 0),
-                ChargerLocations.createLocation(12, 630740.137462418, 5806467.83836639, 0) //
+        SimpleLocation[] LOCATIONS = {
+                SimpleLocation.create(1, 629375.526287495, 5807049.09624582),
+                SimpleLocation.create(2, 627667.270111601, 5806032.00666041),
+                SimpleLocation.create(3, 629858.161036597, 5807986.09770554),
+                SimpleLocation.create(4, 627670.750480261, 5808514.98110016),
+                SimpleLocation.create(5, 628931.787064244, 5808428.14220098),
+                SimpleLocation.create(6, 632665.914282043, 5806912.26666199),
+                SimpleLocation.create(7, 631414.841065603, 5808351.76701608),
+                SimpleLocation.create(8, 631350.921863240, 5807870.60505818),
+                SimpleLocation.create(9, 631357.194136764, 5810714.22475246),
+                SimpleLocation.create(10, 631256.667354371, 5811489.93034689),
+                SimpleLocation.create(11, 630810.948612502, 5812932.31900434),
+                SimpleLocation.create(12, 630740.137462418, 5806467.83836639) //
         };
 
         Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
@@ -75,7 +75,7 @@ public class ZoneDistanceMatrixCalculator
         matrixFile += "fastest_";
 
         Map<Id<Zone>, Zone> zones = Zones.readZones(zonesXmlFile, zonesShpFile);
-        List<ChargerLocation> locations = Arrays.asList(LOCATIONS);
+        List<SimpleLocation> locations = Arrays.asList(LOCATIONS);
 
         Matrix zone2zone = DistanceMatrixUtils.calculateDistanceMatrix(calculator, zones.values(),
                 zones.values());

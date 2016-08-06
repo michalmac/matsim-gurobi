@@ -19,44 +19,39 @@
 
 package playground.michalm.chargerlocation;
 
-import java.util.*;
-
-import org.matsim.api.core.v01.Id;
-import org.matsim.contrib.zone.Zone;
+import org.matsim.api.core.v01.*;
 
 
-public class ZoneData
+public class SimpleLocation
+    implements BasicLocation<SimpleLocation>
 {
-    public static class Entry
+    public static SimpleLocation create(long id, double x, double y)
     {
-        public final Zone zone;
-        public final double potential;
-
-
-        public Entry(Zone zone, double potential)
-        {
-            this.zone = zone;
-            this.potential = potential;
-        }
+        return new SimpleLocation(Id.create(id, SimpleLocation.class), new Coord(x, y));
     }
 
 
-    public final List<Entry> entries = new ArrayList<>();
-    public final double totalPotential;
-    public final double potentialToEnergy;
+    private final Id<SimpleLocation> id;
+    private final Coord coord;
 
 
-    public ZoneData(Map<Id<Zone>, Zone> zones, Map<Id<Zone>, Double> zonePotentials,
-            double potentialToEnergy)
+    public SimpleLocation(Id<SimpleLocation> id, Coord coord)
     {
-        this.potentialToEnergy = potentialToEnergy;
+        this.id = id;
+        this.coord = coord;
+    }
 
-        double potentialSum = 0;
-        for (Zone z : zones.values()) {
-            double p = zonePotentials.get(z.getId());
-            entries.add(new Entry(z, p));
-            potentialSum += p;
-        }
-        totalPotential = potentialSum;
+
+    @Override
+    public Id<SimpleLocation> getId()
+    {
+        return id;
+    }
+
+
+    @Override
+    public Coord getCoord()
+    {
+        return coord;
     }
 }

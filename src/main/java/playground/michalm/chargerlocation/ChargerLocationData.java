@@ -21,27 +21,19 @@ package playground.michalm.chargerlocation;
 
 import java.util.*;
 
-import org.matsim.api.core.v01.*;
-import org.matsim.contrib.zone.Zone;
+import org.matsim.api.core.v01.BasicLocation;
+
+import com.google.common.collect.Lists;
 
 
-public class ChargerLocations
+public class ChargerLocationData<C extends BasicLocation<C>>
 {
-    public static ChargerLocation createLocation(long id, double x, double y, double power)
+    public final List<C> locations;
+
+
+    public ChargerLocationData(Iterable<C> basicLocations)
     {
-        return new ChargerLocation(Id.create(id, ChargerLocation.class), new Coord(x, y),
-                power);
-    }
-
-
-    public static List<ChargerLocation> createLocationsInZones(Iterable<Zone> zones, double power)
-    {
-        List<ChargerLocation> locations = new ArrayList<>();
-        for (Zone z : zones) {
-            locations.add(new ChargerLocation(Id.create(z.getId(), ChargerLocation.class),
-                    z.getCoord(), power));
-        }
-
-        return locations;
+        locations = Lists.newArrayList(basicLocations);
+        Collections.sort(locations, (l1, l2) -> l1.getId().compareTo(l2.getId()));//??
     }
 }

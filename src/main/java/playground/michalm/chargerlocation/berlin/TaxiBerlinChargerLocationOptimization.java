@@ -77,15 +77,12 @@ public class TaxiBerlinChargerLocationOptimization
     }
 
 
-
     //TST'15 paper
     private final boolean rechargeBeforeEnd;
     private final EScenario eScenario;
 
     private ChargerLocationProblem problem;
     private ChargerLocationSolution solution;
-
-    private double totalPotential = 0;
 
 
     public TaxiBerlinChargerLocationOptimization(EScenario eScenario, boolean includeDeltaSoc)
@@ -96,10 +93,10 @@ public class TaxiBerlinChargerLocationOptimization
     }
 
 
-    private void init()
+    private void createProblem()
     {
-        String dir = "d:/svn-vsp/sustainability-w-michal-and-dlr/data/";
-        String networkFile = dir + "scenarios/2015_02_basic_scenario_v6/berlin_brb.xml";
+        String dir = "d:/eclipse/shared-svn/projects/sustainability-w-michal-and-dlr/data/";
+        String networkFile = dir + "network/berlin_brb.xml";
         String zonesXmlFile = dir + "shp_merged/berlin_zones.xml";
         String zonesShpFile = dir + "shp_merged/berlin_zones.shp";
         String potentialFile = dir + "taxi_berlin/2014/status/idleVehiclesPerZoneAndHour.txt";
@@ -108,28 +105,23 @@ public class TaxiBerlinChargerLocationOptimization
         new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
         Map<Id<Zone>, Zone> zones = BerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
 
-        double totalEnergyRequired = //
-                Math.max(eScenario.energyPerVehicle - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0)
-                        * vehicleCount;
+        DemandData<Zone> zoneData = createZoneData(zones, potentialFile);
+        ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(zones.values());
 
-        ZoneData zoneData = createZoneData(zones, potentialFile, totalEnergyRequired);
-        ChargerData chargerData = createChargerData(zones);
-
-        int maxChargers = (int)Math.ceil(eScenario.oversupply * totalEnergyRequired
-                / (eScenario.chargePower * HOURS));
-        System.out.println("minMaxChargers = " + maxChargers);
+        double totalEnergyRequired = vehicleCount
+                * Math.max(eScenario.energyPerVehicle - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
 
         //        DistanceCalculator calculator = DistanceCalculators
         //                .crateFreespeedDistanceCalculator(scenario.getNetwork());
         DistanceCalculator calculator = DistanceCalculators.BEELINE_DISTANCE_CALCULATOR;
 
-        problem = new ChargerLocationProblem(zoneData, chargerData, calculator, HOURS, MAX_DISTANCE,
-                MAX_CHARGERS_PER_ZONE, maxChargers);
+        problem = new ChargerLocationProblem(zoneData, chargerData, calculator, HOURS,
+                eScenario.chargePower, totalEnergyRequired, eScenario.oversupply, MAX_DISTANCE,
+                MAX_CHARGERS_PER_ZONE);
     }
 
 
-    private ZoneData createZoneData(Map<Id<Zone>, Zone> zones, String potentialFile,
-            double totalEnergyConsumed)
+    private DemandData<Zone> createZoneData(Map<Id<Zone>, Zone> zones, String potentialFile)
     {
         Map<Id<Zone>, Double> zonePotentials = new HashMap<>();
 
@@ -160,25 +152,10 @@ public class TaxiBerlinChargerLocationOptimization
                 }
 
                 zonePotentials.put(id, potential);
-                totalPotential += potential;
             }
         }
 
-        return new ZoneData(zones, zonePotentials, totalEnergyConsumed / totalPotential);
-    }
-
-
-    private ChargerData createChargerData(Map<Id<Zone>, Zone> zones)
-    {
-        //read/create stations at either zone centroids or ranks 
-        List<ChargerLocation> locations = new ArrayList<>();
-        for (Zone z : zones.values()) {
-            Id<ChargerLocation> id = Id.create(z.getId(), ChargerLocation.class);
-            ChargerLocation location = new ChargerLocation(id, z.getCoord(), eScenario.chargePower);
-            locations.add(location);
-        }
-
-        return new ChargerData(locations);
+        return new DemandData<Zone>(zones.values(), zonePotentials);
     }
 
 
@@ -205,7 +182,7 @@ public class TaxiBerlinChargerLocationOptimization
             boolean includeDeltaSoc = !true;
             TaxiBerlinChargerLocationOptimization optimRunner = new TaxiBerlinChargerLocationOptimization(
                     es, includeDeltaSoc);
-            optimRunner.init();
+            optimRunner.createProblem();
             optimRunner.solveProblem();
             optimRunner.writeSolution();
         }
