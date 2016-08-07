@@ -41,7 +41,7 @@ public class ChargerLocationProblem
 
     public final DemandData<?> demandData;
     public final ChargerLocationData<?> chargerData;
-    
+
     public final double potentialSatisfiedByCharger;
 
     public final double maxDistance;
@@ -61,7 +61,7 @@ public class ChargerLocationProblem
     {
         this.demandData = demandData;
         this.chargerData = chargerData;
-        
+
         double energyProducedByCharger = hours * chargePower;
         double energyRequiredPerPotential = totalEnergyRequired / demandData.totalDemand;
         potentialSatisfiedByCharger = energyProducedByCharger / energyRequiredPerPotential;

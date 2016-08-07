@@ -22,12 +22,9 @@ package playground.michalm.chargerlocation.berlin;
 import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
-import org.matsim.api.core.v01.*;
-import org.matsim.contrib.util.distance.*;
+import org.matsim.api.core.v01.Id;
+import org.matsim.contrib.util.distance.DistanceCalculators;
 import org.matsim.contrib.zone.Zone;
-import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.network.io.MatsimNetworkReader;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 
 import playground.michalm.berlin.BerlinZoneUtils;
@@ -45,8 +42,8 @@ public class TaxiBerlinChargerLocationOptimization
     private static final int vehicleCount = vehicleHours / 16; //each vehicle operates 16 hours (2 shifts)
 
     //MIP
-    //this restrictions influences mostly the outskirts (where speeds > 25km/h ==> TT < 6 min)
-    private static final double MAX_DISTANCE = 2_500;//m
+    //this restrictions influences mostly the outskirts
+    private static final double MAX_DISTANCE = 3_000;//m
 
     //high value -> no influence (the current approach); low value -> lack of chargers at TXL
     private static final int MAX_CHARGERS_PER_ZONE = 30;
@@ -54,13 +51,12 @@ public class TaxiBerlinChargerLocationOptimization
 
     private enum EScenario
     {
-        //works with includeDeltaSoc=true/false
+        //works with rechargeBeforeEnd=true/false
         //        STANDARD(41.75, 50, 1.5), //
         //        HOT_SUMMER(69.75, 50, 1.2), //
         //        COLD_WINTER(105.75, 25, 1.05), //
         //        COLD_WINTER_FOSSIL_HEATING(41.75, 25, 1.2);
 
-        //includeDeltaSoc=false
         COLD_WINTER_FOSSIL_HEATING(41.75, 25, 1.1);
 
         private final double energyPerVehicle;//kWh
@@ -84,6 +80,12 @@ public class TaxiBerlinChargerLocationOptimization
     private ChargerLocationProblem problem;
     private ChargerLocationSolution solution;
 
+    private final String dir = "d:/eclipse/shared-svn/projects/sustainability-w-michal-and-dlr/data/";
+    private final String zonesXmlFile = dir + "shp_merged/berlin_zones.xml";
+    private final String zonesShpFile = dir + "shp_merged/berlin_zones.shp";
+    private final String potentialFile = dir
+            + "taxi_berlin/2014/status/idleVehiclesPerZoneAndHour.txt";
+
 
     public TaxiBerlinChargerLocationOptimization(EScenario eScenario, boolean includeDeltaSoc)
     {
@@ -95,33 +97,20 @@ public class TaxiBerlinChargerLocationOptimization
 
     private void createProblem()
     {
-        String dir = "d:/eclipse/shared-svn/projects/sustainability-w-michal-and-dlr/data/";
-        String networkFile = dir + "network/berlin_brb.xml";
-        String zonesXmlFile = dir + "shp_merged/berlin_zones.xml";
-        String zonesShpFile = dir + "shp_merged/berlin_zones.shp";
-        String potentialFile = dir + "taxi_berlin/2014/status/idleVehiclesPerZoneAndHour.txt";
-
-        Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-        new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
         Map<Id<Zone>, Zone> zones = BerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
-
-        DemandData<Zone> zoneData = createZoneData(zones, potentialFile);
+        DemandData<Zone> demandData = createDemandData(zones, potentialFile);
         ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(zones.values());
 
         double totalEnergyRequired = vehicleCount
                 * Math.max(eScenario.energyPerVehicle - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
 
-        //        DistanceCalculator calculator = DistanceCalculators
-        //                .crateFreespeedDistanceCalculator(scenario.getNetwork());
-        DistanceCalculator calculator = DistanceCalculators.BEELINE_DISTANCE_CALCULATOR;
-
-        problem = new ChargerLocationProblem(zoneData, chargerData, calculator, HOURS,
-                eScenario.chargePower, totalEnergyRequired, eScenario.oversupply, MAX_DISTANCE,
-                MAX_CHARGERS_PER_ZONE);
+        problem = new ChargerLocationProblem(demandData, chargerData,
+                DistanceCalculators.BEELINE_DISTANCE_CALCULATOR, HOURS, eScenario.chargePower,
+                totalEnergyRequired, eScenario.oversupply, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
     }
 
 
-    private DemandData<Zone> createZoneData(Map<Id<Zone>, Zone> zones, String potentialFile)
+    private DemandData<Zone> createDemandData(Map<Id<Zone>, Zone> zones, String potentialFile)
     {
         Map<Id<Zone>, Double> zonePotentials = new HashMap<>();
 
@@ -167,8 +156,7 @@ public class TaxiBerlinChargerLocationOptimization
 
     private void writeSolution()
     {
-        String dir = "d:/PP-rad/berlin/chargerLocation/";
-        String name = eScenario.name() + (rechargeBeforeEnd ? "_DeltaSOC" : "_noDeltaSOC");
+        String name = eScenario.name() + (rechargeBeforeEnd ? "_noDeltaSOC" : "_DeltaSOC");
         ChargerLocationSolutionWriter writer = new ChargerLocationSolutionWriter(problem, solution);
         writer.writeChargers(dir + "chargers_out_of_" + problem.maxChargers + "_" + name + ".csv");
         writer.writeFlows(dir + "flows_" + name + ".csv");
@@ -179,9 +167,9 @@ public class TaxiBerlinChargerLocationOptimization
     {
         for (EScenario es : EScenario.values()) {
             System.err.println("==========================" + es.name());
-            boolean includeDeltaSoc = !true;
+            boolean rechargeBeforeEnd = !true;
             TaxiBerlinChargerLocationOptimization optimRunner = new TaxiBerlinChargerLocationOptimization(
-                    es, includeDeltaSoc);
+                    es, rechargeBeforeEnd);
             optimRunner.createProblem();
             optimRunner.solveProblem();
             optimRunner.writeSolution();

@@ -19,7 +19,7 @@
 
 package playground.michalm.chargerlocation;
 
-import java.util.*;
+import java.util.List;
 
 import org.matsim.api.core.v01.BasicLocation;
 
@@ -34,6 +34,5 @@ public class ChargerLocationData<C extends BasicLocation<C>>
     public ChargerLocationData(Iterable<C> basicLocations)
     {
         locations = Lists.newArrayList(basicLocations);
-        Collections.sort(locations, (l1, l2) -> l1.getId().compareTo(l2.getId()));//??
     }
 }
