@@ -17,7 +17,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package playground.michalm.chargerlocation.berlin;
+package playground.michalm.chargerlocation.TaxiBerlin;
 
 import java.util.*;
 
@@ -30,7 +30,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.utils.io.IOUtils;
 
-import playground.michalm.berlin.BerlinZoneUtils;
+import playground.michalm.TaxiBerlin.TaxiBerlinZoneUtils;
 import playground.michalm.chargerlocation.*;
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
 import playground.michalm.ev.data.*;
@@ -103,7 +103,7 @@ public class TaxiBerlinChargerLocationOptimization
 
     private void createProblem()
     {
-        Map<Id<Zone>, Zone> zones = BerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
+        Map<Id<Zone>, Zone> zones = TaxiBerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
         DemandData<Zone> demandData = createDemandData(zones, potentialFile);
         ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(zones.values());
 
@@ -181,7 +181,7 @@ public class TaxiBerlinChargerLocationOptimization
                 Id<Charger> id = Id.create(l.getId(), Charger.class);
                 int x_j = (int)Math.round(solution.x[j]);
                 Link link = NetworkUtils.getNearestLink(network,
-                        BerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
+                        TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
                                 .transform(l.getCoord()));
                 chargers.add(new ChargerImpl(id, eScenario.chargePower, x_j, link));
             }

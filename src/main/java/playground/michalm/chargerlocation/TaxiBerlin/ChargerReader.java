@@ -17,7 +17,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package playground.michalm.chargerlocation.berlin;
+package playground.michalm.chargerlocation.TaxiBerlin;
 
 import java.io.*;
 import java.util.Map;
@@ -30,7 +30,7 @@ import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
 import org.matsim.core.scenario.ScenarioUtils;
 
-import playground.michalm.berlin.BerlinZoneUtils;
+import playground.michalm.TaxiBerlin.TaxiBerlinZoneUtils;
 import playground.michalm.ev.data.*;
 
 
@@ -64,7 +64,7 @@ public class ChargerReader
                 int capacity = Integer.parseInt(vals[1]);
 
                 Zone zone = zones.get(Id.create(id, Zone.class));
-                Coord coord = BerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
+                Coord coord = TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
                         .transform(zone.getCoord());
                 final Coord coord1 = coord;
                 Link link = NetworkUtils.getNearestLinkExactly(network, coord1);
@@ -91,7 +91,7 @@ public class ChargerReader
         Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
         new MatsimNetworkReader(scenario.getNetwork()).readFile(networkFile);
 
-        Map<Id<Zone>, Zone> zones = BerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
+        Map<Id<Zone>, Zone> zones = TaxiBerlinZoneUtils.readZones(zonesXmlFile, zonesShpFile);
 
         EvData data = new EvDataImpl();
 
