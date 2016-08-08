@@ -33,52 +33,49 @@ import org.matsim.core.utils.io.IOUtils;
 import playground.michalm.TaxiBerlin.TaxiBerlinZoneUtils;
 import playground.michalm.chargerlocation.*;
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
+import playground.michalm.ev.EvUnitConversions;
 import playground.michalm.ev.data.*;
 import playground.michalm.ev.data.file.ChargerWriter;
 
 
 public class TaxiBerlinChargerLocationOptimization
 {
-    //TST'15 paper
-    private static final double DELTA_SOC = 16;//kWh
-    private static final int HOURS = 16;
+    private static final int VEHICLE_HOURS = 32064;//ANT'15 paper (Tue 4am - Wed 4am, 16-17 Apr 2014)
 
-    private static final int vehicleHours = 32064;//ANT'15 paper (Tue 4am - Wed 4am, 16-17 Apr 2014)
-    private static final int vehicleCount = vehicleHours / 16; //each vehicle operates 16 hours (2 shifts)
-
-    //MIP
-    //this restrictions influences mostly the outskirts
+    //influences mostly the outskirts
     private static final double MAX_DISTANCE = 3_000;//m
 
     //high value -> no influence (the current approach); low value -> lack of chargers at TXL
     private static final int MAX_CHARGERS_PER_ZONE = 30;
 
+    //smaller demand -> larger oversupply (also sensitive to includeDeltaSOC)
+    private static final double OVERSUPPLY = 1.1;
 
+    //TST'15 paper
+    private static final double DELTA_SOC = 16;//kWh
+    private static final int HOURS = 16;//h, each vehicle operates 16 hours (2 shifts)
+
+
+    //TST'15 paper (after fixing the error in XLS)
     private enum EScenario
     {
-        //works with rechargeBeforeEnd=true/false
-        //        STANDARD(41.75, 50, 1.5), //
-        //        HOT_SUMMER(69.75, 50, 1.2), //
-        //        COLD_WINTER(105.75, 25, 1.05), //
-        //        COLD_WINTER_FOSSIL_HEATING(41.75, 25, 1.2);
-
-        COLD_WINTER_FOSSIL_HEATING(41.75, 25, 1.1);
+        STANDARD(41.75, 50), //
+        HOT_SUMMER(55.75, 50), //
+        COLD_WINTER(89.75, 25), //
+        COLD_WINTER_FOSSIL_HEATING(41.75, 25);
 
         private final double energyPerVehicle;//kWh
         private final double chargePower;//kW
-        private final double oversupply; //smaller demand -> larger oversupply (also sensitive to includeDeltaSOC)
 
 
-        private EScenario(double energyPerVehicle, double chargePower, double oversupply)
+        private EScenario(double energyPerVehicle, double chargePower)
         {
             this.energyPerVehicle = energyPerVehicle;
             this.chargePower = chargePower;
-            this.oversupply = oversupply;
         }
     }
 
 
-    //TST'15 paper
     private final boolean rechargeBeforeEnd;
     private final EScenario eScenario;
 
@@ -107,12 +104,12 @@ public class TaxiBerlinChargerLocationOptimization
         DemandData<Zone> demandData = createDemandData(zones, potentialFile);
         ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(zones.values());
 
-        double totalEnergyRequired = vehicleCount
+        double totalEnergyRequired = VEHICLE_HOURS / HOURS
                 * Math.max(eScenario.energyPerVehicle - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
 
         problem = new ChargerLocationProblem(demandData, chargerData,
                 DistanceCalculators.BEELINE_DISTANCE_CALCULATOR, HOURS, eScenario.chargePower,
-                totalEnergyRequired, eScenario.oversupply, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
+                totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
     }
 
 
@@ -179,11 +176,12 @@ public class TaxiBerlinChargerLocationOptimization
             if (solution.x[j] > 0.5) {
                 BasicLocation<?> l = problem.chargerData.locations.get(j);
                 Id<Charger> id = Id.create(l.getId(), Charger.class);
-                int x_j = (int)Math.round(solution.x[j]);
+                double power = eScenario.chargePower * EvUnitConversions.W_PER_kW;
+                int plugs = (int)Math.round(solution.x[j]);
                 Link link = NetworkUtils.getNearestLink(network,
                         TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
                                 .transform(l.getCoord()));
-                chargers.add(new ChargerImpl(id, eScenario.chargePower, x_j, link));
+                chargers.add(new ChargerImpl(id, power, plugs, link));
             }
         }
 
