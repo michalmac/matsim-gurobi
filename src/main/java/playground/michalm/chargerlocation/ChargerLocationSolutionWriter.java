@@ -50,7 +50,7 @@ public class ChargerLocationSolutionWriter
 
         try (CompactCSVWriter writer = new CompactCSVWriter(IOUtils.getBufferedWriter(file))) {
             for (int j = 0; j < problem.J; j++) {
-                if (solution.x[j] > 0) {
+                if (solution.x[j] > 0.5) {
                     writer.writeNext(//
                             locations.get(j).getId() + "", //
                             solution.x[j] + "");
