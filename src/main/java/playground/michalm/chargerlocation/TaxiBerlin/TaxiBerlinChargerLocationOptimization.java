@@ -22,8 +22,8 @@ package playground.michalm.chargerlocation.TaxiBerlin;
 import java.util.*;
 
 import org.apache.commons.lang3.StringUtils;
-import org.matsim.api.core.v01.*;
-import org.matsim.api.core.v01.network.*;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.util.distance.DistanceCalculators;
 import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.NetworkUtils;
@@ -33,8 +33,7 @@ import org.matsim.core.utils.io.IOUtils;
 import playground.michalm.TaxiBerlin.TaxiBerlinZoneUtils;
 import playground.michalm.chargerlocation.*;
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
-import playground.michalm.ev.EvUnitConversions;
-import playground.michalm.ev.data.*;
+import playground.michalm.ev.data.Charger;
 import playground.michalm.ev.data.file.ChargerWriter;
 
 
@@ -163,29 +162,11 @@ public class TaxiBerlinChargerLocationOptimization
         ChargerLocationSolutionWriter writer = new ChargerLocationSolutionWriter(problem, solution);
         writer.writeChargers(dir + "chargers_" + problem.maxChargers + "_" + name + ".csv");
         writer.writeFlows(dir + "flows_" + name + ".csv");
-    }
 
-
-    private void generateChargers()
-    {
         Network network = NetworkUtils.createNetwork();
         new MatsimNetworkReader(network).readFile(networkFile);
-
-        List<Charger> chargers = new ArrayList<>(problem.maxChargers);
-        for (int j = 0; j < problem.J; j++) {
-            if (solution.x[j] > 0.5) {
-                BasicLocation<?> l = problem.chargerData.locations.get(j);
-                Id<Charger> id = Id.create(l.getId(), Charger.class);
-                double power = eScenario.chargePower * EvUnitConversions.W_PER_kW;
-                int plugs = (int)Math.round(solution.x[j]);
-                Link link = NetworkUtils.getNearestLink(network,
-                        TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION
-                                .transform(l.getCoord()));
-                chargers.add(new ChargerImpl(id, power, plugs, link));
-            }
-        }
-
-        String name = eScenario.name() + (rechargeBeforeEnd ? "_noDeltaSOC" : "_DeltaSOC");
+        List<Charger> chargers = writer.generateChargers(network,
+                TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION, eScenario.chargePower);
         new ChargerWriter(chargers)
                 .write(dir + "chargers_" + problem.maxChargers + "_" + name + ".xml");
     }
@@ -201,7 +182,6 @@ public class TaxiBerlinChargerLocationOptimization
             optimRunner.createProblem();
             optimRunner.solveProblem();
             optimRunner.writeSolution();
-            optimRunner.generateChargers();
         }
     }
 }

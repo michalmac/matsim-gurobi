@@ -19,13 +19,19 @@
 
 package playground.michalm.chargerlocation;
 
-import java.util.List;
+import java.util.*;
 
-import org.matsim.api.core.v01.BasicLocation;
+import org.matsim.api.core.v01.*;
+import org.matsim.api.core.v01.network.*;
 import org.matsim.contrib.util.CompactCSVWriter;
+import org.matsim.core.network.NetworkUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.core.utils.io.IOUtils;
 
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
+import playground.michalm.ev.EvUnitConversions;
+import playground.michalm.ev.data.*;
 
 
 public class ChargerLocationSolutionWriter
@@ -41,6 +47,31 @@ public class ChargerLocationSolutionWriter
     {
         this.problem = problem;
         this.solution = solution;
+    }
+
+    
+    public List<Charger> generateChargers(Network network, double chargePower)
+    {
+        return generateChargers(network, new IdentityTransformation(), chargePower);
+    }
+
+
+    public List<Charger> generateChargers(Network network,
+            CoordinateTransformation locToNetCoordTransform, double chargePower)
+    {
+        List<Charger> chargers = new ArrayList<>(problem.maxChargers);
+        for (int j = 0; j < problem.J; j++) {
+            if (solution.x[j] > 0.5) {
+                BasicLocation<?> loc = problem.chargerData.locations.get(j);
+                Id<Charger> id = Id.create(loc.getId(), Charger.class);
+                double power = chargePower * EvUnitConversions.W_PER_kW;
+                int plugs = (int)Math.round(solution.x[j]);
+                Coord coord = locToNetCoordTransform.transform(loc.getCoord());
+                Link link = NetworkUtils.getNearestLink(network, coord);
+                chargers.add(new ChargerImpl(id, power, plugs, link));
+            }
+        }
+        return chargers;
     }
 
 
