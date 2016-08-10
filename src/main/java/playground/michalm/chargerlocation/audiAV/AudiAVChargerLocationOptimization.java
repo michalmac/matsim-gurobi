@@ -59,16 +59,17 @@ public class AudiAVChargerLocationOptimization
         PLUS_20(4, 50), //
         ZERO(3.5, 25), //
         MINUS_20(2.5, 25), //the most critical
-        FOSSIL_FUEL_MINUS_20(5, 25), ONLY_DRIVE(5.5, 50); //optimistic
+        FOSSIL_FUEL_MINUS_20(5, 25), //
+        ONLY_DRIVE(5.5, 50); //optimistic
 
         private final double hours;//hours, period during the whole fleet goes 80%->20%
-        private final double chargePower;//kW
+        private final double chargePower_kW;
 
 
         private EScenario(double hours, double chargePower)
         {
             this.hours = hours;
-            this.chargePower = chargePower;
+            this.chargePower_kW = chargePower;
         }
     }
 
@@ -84,6 +85,7 @@ public class AudiAVChargerLocationOptimization
     private final String zonesShpFile = dir + "shp/berlin_zones.shp";
     private final String networkFile = dir + "scenario/networkc.xml.gz";
     private final String potentialFile = dir + "scenario/JAIHC_paper/dropoffs_per_link.txt";
+    private final String outDir = "../runs-svn/avsim_time_variant_network/chargers/";
 
 
     public AudiAVChargerLocationOptimization(EScenario eScenario)
@@ -107,7 +109,7 @@ public class AudiAVChargerLocationOptimization
         double totalEnergyRequired = VEHICLES * SOC_RECHARGE;
         problem = new ChargerLocationProblem(demandData, chargerData,
                 DistanceCalculators.BEELINE_DISTANCE_CALCULATOR, eScenario.hours,
-                eScenario.chargePower, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE,
+                eScenario.chargePower_kW, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE,
                 MAX_CHARGERS_PER_ZONE);
     }
 
@@ -124,6 +126,7 @@ public class AudiAVChargerLocationOptimization
 
     private void solveProblem()
     {
+        System.err.println("solveProblem() started");
         solution = new ChargerLocationSolver(problem).solve(null);
     }
 
@@ -132,12 +135,12 @@ public class AudiAVChargerLocationOptimization
     {
         String name = eScenario.name();
         ChargerLocationSolutionWriter writer = new ChargerLocationSolutionWriter(problem, solution);
-        writer.writeChargers(dir + "chargers_" + problem.maxChargers + "_" + name + ".csv");
-        writer.writeFlows(dir + "flows_" + name + ".csv");
+        writer.writeChargers(outDir + "chargers_" + problem.maxChargers + "_" + name + ".csv");
+        writer.writeFlows(outDir + "flows_" + name + ".csv");
 
-        List<Charger> chargers = writer.generateChargers(network, eScenario.chargePower);
+        List<Charger> chargers = writer.generateChargers(network, eScenario.chargePower_kW);
         new ChargerWriter(chargers)
-                .write(dir + "chargers_" + problem.maxChargers + "_" + name + ".xml");
+                .write(outDir + "chargers_" + problem.maxChargers + "_" + name + ".xml");
     }
 
 

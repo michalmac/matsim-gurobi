@@ -55,20 +55,23 @@ public class ChargerLocationProblem
 
 
     public ChargerLocationProblem(DemandData<?> demandData, ChargerLocationData<?> chargerData,
-            DistanceCalculator distanceCalculator, double hours, double chargePower,
-            double totalEnergyRequired, double oversupply, double maxDistance,
+            DistanceCalculator distanceCalculator, double hours, double chargePower_kW,
+            double totalEnergyRequired_kWh, double oversupply, double maxDistance,
             int maxChargersAtLocation)
     {
         this.demandData = demandData;
         this.chargerData = chargerData;
 
-        double energyProducedByCharger = hours * chargePower;
-        double energyRequiredPerPotential = totalEnergyRequired / demandData.totalDemand;
-        potentialSatisfiedByCharger = energyProducedByCharger / energyRequiredPerPotential;
+        double energyProducedByCharger_kWh = hours * chargePower_kW;
+        double energyRequiredPerPotentialUnit_kWh = totalEnergyRequired_kWh
+                / demandData.totalDemand;
+        potentialSatisfiedByCharger = energyProducedByCharger_kWh
+                / energyRequiredPerPotentialUnit_kWh;
 
         this.maxChargersAtLocation = maxChargersAtLocation;
         this.maxDistance = maxDistance;
-        maxChargers = (int)Math.ceil(oversupply * totalEnergyRequired / energyProducedByCharger);
+        maxChargers = (int)Math
+                .ceil(oversupply * totalEnergyRequired_kWh / energyProducedByCharger_kWh);
 
         I = demandData.entries.size();
         J = chargerData.locations.size();

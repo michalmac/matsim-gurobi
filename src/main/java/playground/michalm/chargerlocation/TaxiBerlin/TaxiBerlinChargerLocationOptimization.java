@@ -63,14 +63,14 @@ public class TaxiBerlinChargerLocationOptimization
         COLD_WINTER(89.75, 25), //
         COLD_WINTER_FOSSIL_HEATING(41.75, 25);
 
-        private final double energyPerVehicle;//kWh
-        private final double chargePower;//kW
+        private final double energyPerVehicle_kWh;
+        private final double chargePower_kW;
 
 
-        private EScenario(double energyPerVehicle, double chargePower)
+        private EScenario(double energyPerVehicle_kWh, double chargePower_kW)
         {
-            this.energyPerVehicle = energyPerVehicle;
-            this.chargePower = chargePower;
+            this.energyPerVehicle_kWh = energyPerVehicle_kWh;
+            this.chargePower_kW = chargePower_kW;
         }
     }
 
@@ -104,10 +104,10 @@ public class TaxiBerlinChargerLocationOptimization
         ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(zones.values());
 
         double totalEnergyRequired = VEHICLE_HOURS / HOURS
-                * Math.max(eScenario.energyPerVehicle - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
+                * Math.max(eScenario.energyPerVehicle_kWh - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
 
         problem = new ChargerLocationProblem(demandData, chargerData,
-                DistanceCalculators.BEELINE_DISTANCE_CALCULATOR, HOURS, eScenario.chargePower,
+                DistanceCalculators.BEELINE_DISTANCE_CALCULATOR, HOURS, eScenario.chargePower_kW,
                 totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
     }
 
@@ -166,7 +166,7 @@ public class TaxiBerlinChargerLocationOptimization
         Network network = NetworkUtils.createNetwork();
         new MatsimNetworkReader(network).readFile(networkFile);
         List<Charger> chargers = writer.generateChargers(network,
-                TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION, eScenario.chargePower);
+                TaxiBerlinZoneUtils.ZONE_TO_NETWORK_COORD_TRANSFORMATION, eScenario.chargePower_kW);
         new ChargerWriter(chargers)
                 .write(dir + "chargers_" + problem.maxChargers + "_" + name + ".xml");
     }

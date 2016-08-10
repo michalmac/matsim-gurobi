@@ -49,22 +49,22 @@ public class ChargerLocationSolutionWriter
         this.solution = solution;
     }
 
-    
-    public List<Charger> generateChargers(Network network, double chargePower)
+
+    public List<Charger> generateChargers(Network network, double chargePower_kW)
     {
-        return generateChargers(network, new IdentityTransformation(), chargePower);
+        return generateChargers(network, new IdentityTransformation(), chargePower_kW);
     }
 
 
     public List<Charger> generateChargers(Network network,
-            CoordinateTransformation locToNetCoordTransform, double chargePower)
+            CoordinateTransformation locToNetCoordTransform, double chargePower_kW)
     {
         List<Charger> chargers = new ArrayList<>(problem.maxChargers);
         for (int j = 0; j < problem.J; j++) {
             if (solution.x[j] > 0.5) {
                 BasicLocation<?> loc = problem.chargerData.locations.get(j);
                 Id<Charger> id = Id.create(loc.getId(), Charger.class);
-                double power = chargePower * EvUnitConversions.W_PER_kW;
+                double power = chargePower_kW * EvUnitConversions.W_PER_kW;
                 int plugs = (int)Math.round(solution.x[j]);
                 Coord coord = locToNetCoordTransform.transform(loc.getCoord());
                 Link link = NetworkUtils.getNearestLink(network, coord);
