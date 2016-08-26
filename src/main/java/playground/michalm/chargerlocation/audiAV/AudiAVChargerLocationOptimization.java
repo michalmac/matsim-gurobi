@@ -38,13 +38,17 @@ import playground.michalm.ev.data.file.ChargerWriter;
 
 public class AudiAVChargerLocationOptimization
 {
-    private static final int VEHICLES = 100_000;//ANT'16 paper
+    //private static final int VEHICLES = 100_000;//100% scenario (ANT'16 paper)
+    private static final int VEHICLES = 11_000;//10% scenario (11% demand and supply)
+    //private static final int VEHICLES = 200;//small scenario
 
     //influences mostly the outskirts
-    private static final double MAX_DISTANCE = 3_000;//m
+    //private static final double MAX_DISTANCE = 3_000;//[m] 100% scenario
+    private static final double MAX_DISTANCE = 5_000;//[m] 10% scenario
+    //private static final double MAX_DISTANCE = 30_000;//[m] small scenario
 
-    //high value -> no influence (the current approach); low value -> lack of chargers at TXL
-    private static final int MAX_CHARGERS_PER_ZONE = 300;
+    //high value -> no influence (current approach); low value -> lack of chargers at hot spots
+    private static final int MAX_CHARGERS_PER_ZONE = 3000;
 
     //smaller demand -> larger oversupply
     private static final double OVERSUPPLY = 1.1;
@@ -56,11 +60,11 @@ public class AudiAVChargerLocationOptimization
     //TODO consult with GS/BO
     private enum EScenario
     {
+        ONLY_DRIVE(5.5, 50), //over-optimistic
         PLUS_20(4, 50), //
         ZERO(3.5, 25), //
-        MINUS_20(2.5, 25), //the most critical
-        FOSSIL_FUEL_MINUS_20(5, 25), //
-        ONLY_DRIVE(5.5, 50); //optimistic
+        MINUS_20(2.5, 25), //most critical
+        FOSSIL_FUEL_MINUS_20(5, 25); //half green solution
 
         private final double hours;//hours, period during the whole fleet goes 80%->20%
         private final double chargePower_kW;
@@ -85,7 +89,9 @@ public class AudiAVChargerLocationOptimization
     private final String zonesShpFile = dir + "shp/berlin_zones.shp";
     private final String networkFile = dir + "scenario/networkc.xml.gz";
     private final String potentialFile = dir + "scenario/JAIHC_paper/dropoffs_per_link.txt";
-    private final String outDir = "../runs-svn/avsim_time_variant_network/chargers/";
+    //    private final String outDir = "../runs-svn/avsim_time_variant_network/chargers/";
+    private final String outDir = "../runs-svn/avsim_time_variant_network/chargers_10pct/";
+    //    private final String outDir = "../runs-svn/avsim_time_variant_network/chargers_small/";
 
 
     public AudiAVChargerLocationOptimization(EScenario eScenario)
