@@ -126,7 +126,7 @@ public class MIPProblem
 
     private boolean initDataAndCheckIfSchedulingRequired()
     {
-        vData = new VehicleData(optimContext, optimContext.taxiData.getVehicles().values());
+        vData = new VehicleData(optimContext, optimContext.fleet.getVehicles().values());
         if (vData.getSize() == 0) {
             return false;
         }
@@ -143,7 +143,7 @@ public class MIPProblem
     {
         initialSolution = new MIPSolutionFinder(optimContext, rData, vData).findInitialSolution();
 
-        stats = new MIPTaxiStats(optimContext.taxiData);
+        stats = new MIPTaxiStats(optimContext.fleet);
         stats.calcInitial();
 
         optimContext.scheduler.removeAwaitingRequestsFromAllSchedules();

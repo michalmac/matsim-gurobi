@@ -64,8 +64,7 @@ class MIPSolutionFinder
         double t_P = optimContext.scheduler.getParams().pickupDuration;
 
         for (int k = 0; k < m; k++) {
-            Schedule<TaxiTask> schedule = TaxiSchedules
-                    .asTaxiSchedule(vData.getEntry(k).vehicle.getSchedule());
+            Schedule schedule = vData.getEntry(k).vehicle.getSchedule();
             Iterable<TaxiRequest> reqs = TaxiSchedules.getTaxiRequests(schedule);
             Iterable<TaxiRequest> plannedReqs = Iterables.filter(reqs, TaxiRequests.IS_PLANNED);
 

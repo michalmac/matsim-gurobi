@@ -64,7 +64,7 @@ public class MIPTaxiOptimizer
     @Override
     protected void scheduleUnplannedRequests()
     {
-        if (unplannedRequests.isEmpty()) {
+        if (getUnplannedRequests().isEmpty()) {
             //nothing new to be planned and we want to avoid extra re-planning of what has been
             //already planned (high computational cost while only marginal improvement) 
             return;
@@ -75,12 +75,12 @@ public class MIPTaxiOptimizer
             return;
         }
 
-        MIPProblem mipProblem = new MIPProblem(optimContext, pathTreeTravelTimeCalc);
-        mipProblem.scheduleUnplannedRequests((SortedSet<TaxiRequest>)unplannedRequests);
+        MIPProblem mipProblem = new MIPProblem(getOptimContext(), pathTreeTravelTimeCalc);
+        mipProblem.scheduleUnplannedRequests((SortedSet<TaxiRequest>)getUnplannedRequests());
 
         optimCounter++;
         if (optimCounter % 10 == 0) {
-            System.err.println(optimCounter + "; time=" + optimContext.timer.getTimeOfDay());
+            System.err.println(optimCounter + "; time=" + getOptimContext().timer.getTimeOfDay());
         }
 
         wasLastPlanningHorizonFull = mipProblem.isPlanningHorizonFull();

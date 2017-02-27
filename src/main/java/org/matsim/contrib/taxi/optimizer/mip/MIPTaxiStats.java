@@ -21,7 +21,7 @@ package org.matsim.contrib.taxi.optimizer.mip;
 
 import java.io.PrintWriter;
 
-import org.matsim.contrib.dvrp.data.VrpData;
+import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.taxi.util.stats.*;
 
 
@@ -30,16 +30,16 @@ public class MIPTaxiStats
     //temporarily... not the cleanest design...
     //    public static MIPTaxiStats currentStats;
 
-    private final VrpData data;
+    private final Fleet fleet;
 
     private TaxiStats initial;
     private TaxiStats solved;
     private TaxiStats simulated;
 
 
-    MIPTaxiStats(VrpData data)
+    MIPTaxiStats(Fleet fleet)
     {
-        this.data = data;
+        this.fleet = fleet;
     }
 
 
@@ -96,6 +96,6 @@ public class MIPTaxiStats
 
     private TaxiStats calcTaxiStats()
     {
-        return new TaxiStatsCalculator(data.getVehicles().values()).getDailyStats();
+        return new TaxiStatsCalculator(fleet.getVehicles().values()).getDailyStats();
     }
 }
