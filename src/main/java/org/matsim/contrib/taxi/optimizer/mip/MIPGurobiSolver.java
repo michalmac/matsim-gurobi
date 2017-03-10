@@ -153,7 +153,7 @@ class MIPGurobiSolver
     {
         wVar = new GRBVar[n];
         for (int i = 0; i < n; i++) {
-            double e_i = rData.requests[i].getT0();
+            double e_i = rData.requests[i].getEarliestStartTime();
             double l_i = Math.min(e_i + TW_MAX, W_MAX);
             wVar[i] = model.addVar(e_i, l_i, 0, GRB.CONTINUOUS, "w_" + i);
         }
@@ -167,7 +167,7 @@ class MIPGurobiSolver
         for (int i = 0; i < n; i++) {
             obj.addTerm(1, wVar[i]);
 
-            double e_i = rData.requests[i].getT0();
+            double e_i = rData.requests[i].getEarliestStartTime();
             obj.addConstant(-e_i);
         }
 
@@ -238,7 +238,7 @@ class MIPGurobiSolver
 
     private boolean doExcludeVehToReqDrive(int i, double a_k, double t_O_ki)
     {
-        double l_i = rData.requests[i].getT0() + TW_MAX;
+        double l_i = rData.requests[i].getEarliestStartTime() + TW_MAX;
         double earliestArrival_i = a_k + t_O_ki;
 
         //a_k + t_O_ki  > l_i ==> x[k][m+i] = 0
@@ -293,8 +293,8 @@ class MIPGurobiSolver
 
     private boolean doExcludeReqToReqDrive(int i, int j, double totalT_i, double t_ij)
     {
-        double e_i = rData.requests[i].getT0();
-        double l_j = rData.requests[j].getT0() + TW_MAX;
+        double e_i = rData.requests[i].getEarliestStartTime();
+        double l_j = rData.requests[j].getEarliestStartTime() + TW_MAX;
         double earliestArrival_j = e_i + totalT_i + t_ij;
 
         //e_i + t_P + t_i + t_D + t_ij > l_j ==> x[m+i][m+j] = 0
