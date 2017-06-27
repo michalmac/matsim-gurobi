@@ -31,71 +31,61 @@ import org.matsim.contrib.taxi.schedule.TaxiTask.TaxiTaskType;
 import org.matsim.core.router.util.*;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 
+public class MIPTaxiOptimizer extends AbstractTaxiOptimizer {
+	private final PathTreeBasedTravelTimeCalculator pathTreeTravelTimeCalc;
 
-public class MIPTaxiOptimizer
-    extends AbstractTaxiOptimizer
-{
-    private final PathTreeBasedTravelTimeCalculator pathTreeTravelTimeCalc;
+	private boolean wasLastPlanningHorizonFull = false;// in order to run optimization for the first request
+	private boolean hasPickedUpReqsRecently = false;
 
-    private boolean wasLastPlanningHorizonFull = false;//in order to run optimization for the first request
-    private boolean hasPickedUpReqsRecently = false;
+	private int optimCounter = 0;
 
-    private int optimCounter = 0;
+	public MIPTaxiOptimizer(TaxiOptimizerContext optimContext, MIPTaxiOptimizerParams params) {
+		super(optimContext, params, new TreeSet<TaxiRequest>(Requests.ABSOLUTE_COMPARATOR), true, true);
 
+		if (!optimContext.scheduler.getParams().destinationKnown) {
+			throw new IllegalArgumentException("Destinations must be known ahead");
+		}
 
-    public MIPTaxiOptimizer(TaxiOptimizerContext optimContext, MIPTaxiOptimizerParams params)
-    {
-        super(optimContext, params, new TreeSet<TaxiRequest>(Requests.ABSOLUTE_COMPARATOR), true, true);
+		// TODO should they be taken from optimContext????; what to used then in TaxiScheduler?
+		TravelTime travelTime = new FreeSpeedTravelTime();
+		TravelDisutility travelDisutility = new TimeAsTravelDisutility(travelTime);
 
-        if (!optimContext.scheduler.getParams().destinationKnown) {
-            throw new IllegalArgumentException("Destinations must be known ahead");
-        }
+		pathTreeTravelTimeCalc = new PathTreeBasedTravelTimeCalculator(new DijkstraWithDijkstraTreeCache(
+				optimContext.network, travelDisutility, travelTime, TimeDiscretizer.CYCLIC_24_HOURS));
+	}
 
-        //TODO should they be taken from optimContext????; what to used then in TaxiScheduler?
-        TravelTime travelTime = new FreeSpeedTravelTime();
-        TravelDisutility travelDisutility = new TimeAsTravelDisutility(travelTime);
+	@Override
+	protected void scheduleUnplannedRequests() {
+		if (getUnplannedRequests().isEmpty()) {
+			// nothing new to be planned and we want to avoid extra re-planning of what has been
+			// already planned (high computational cost while only marginal improvement)
+			return;
+		}
 
-        pathTreeTravelTimeCalc = new PathTreeBasedTravelTimeCalculator(
-                new DijkstraWithDijkstraTreeCache(optimContext.network, travelDisutility,
-                        travelTime, TimeDiscretizer.CYCLIC_24_HOURS));
-    }
+		if (wasLastPlanningHorizonFull && // last time we planned as many requests as possible, and...
+				!hasPickedUpReqsRecently) {// ...since then no empty space has appeared in the planning horizon
+			return;
+		}
 
+		MIPProblem mipProblem = new MIPProblem(getOptimContext(), pathTreeTravelTimeCalc);
+		mipProblem.scheduleUnplannedRequests((SortedSet<TaxiRequest>)getUnplannedRequests());
 
-    @Override
-    protected void scheduleUnplannedRequests()
-    {
-        if (getUnplannedRequests().isEmpty()) {
-            //nothing new to be planned and we want to avoid extra re-planning of what has been
-            //already planned (high computational cost while only marginal improvement) 
-            return;
-        }
+		optimCounter++;
+		if (optimCounter % 10 == 0) {
+			System.err.println(optimCounter + "; time=" + getOptimContext().timer.getTimeOfDay());
+		}
 
-        if (wasLastPlanningHorizonFull && //last time we planned as many requests as possible, and...
-                !hasPickedUpReqsRecently) {//...since then no empty space has appeared in the planning horizon 
-            return;
-        }
+		wasLastPlanningHorizonFull = mipProblem.isPlanningHorizonFull();
+		hasPickedUpReqsRecently = false;
+	}
 
-        MIPProblem mipProblem = new MIPProblem(getOptimContext(), pathTreeTravelTimeCalc);
-        mipProblem.scheduleUnplannedRequests((SortedSet<TaxiRequest>)getUnplannedRequests());
+	@Override
+	protected boolean doReoptimizeAfterNextTask(TaxiTask newCurrentTask) {
+		if (newCurrentTask.getTaxiTaskType() == TaxiTaskType.PICKUP) {
+			hasPickedUpReqsRecently = true;
+			return true;
+		}
 
-        optimCounter++;
-        if (optimCounter % 10 == 0) {
-            System.err.println(optimCounter + "; time=" + getOptimContext().timer.getTimeOfDay());
-        }
-
-        wasLastPlanningHorizonFull = mipProblem.isPlanningHorizonFull();
-        hasPickedUpReqsRecently = false;
-    }
-
-
-    @Override
-    protected boolean doReoptimizeAfterNextTask(TaxiTask newCurrentTask)
-    {
-        if (newCurrentTask.getTaxiTaskType() == TaxiTaskType.PICKUP) {
-            hasPickedUpReqsRecently = true;
-            return true;
-        }
-
-        return false;
-    }
+		return false;
+	}
 }

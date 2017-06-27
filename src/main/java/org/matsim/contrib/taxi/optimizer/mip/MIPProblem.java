@@ -26,207 +26,170 @@ import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.optimizer.*;
 import org.matsim.core.utils.io.IOUtils;
 
+public class MIPProblem {
+	static class MIPSolution {
+		final boolean[][] x;
+		final double[] w;
 
-public class MIPProblem
-{
-    static class MIPSolution
-    {
-        final boolean[][] x;
-        final double[] w;
+		MIPSolution(boolean[][] x, double[] w) {
+			this.x = x;
+			this.w = w;
+		}
+	};
 
+	enum Mode {
+		OFFLINE_INIT_OPTIM(true, true, false, 99999), //
+		OFFLINE_INIT(true, false, false, 99999), //
+		OFFLINE_OPTIM(false, true, false, 99999), //
+		OFFLINE_LOAD(false, false, true, 99999), //
+		//
+		ONLINE_1(true, true, false, 1), //
+		ONLINE_2(true, true, false, 2), //
+		ONLINE_3(true, true, false, 3), //
+		ONLINE_4(true, true, false, 4), //
+		ONLINE_5(true, true, false, 5);
 
-        MIPSolution(boolean[][] x, double[] w)
-        {
-            this.x = x;
-            this.w = w;
-        }
-    };
+		private final boolean init;
+		private final boolean optim;
+		private final boolean load;
+		private final int reqsPerVeh;// planning horizon
 
+		private Mode(boolean init, boolean optim, boolean load, int reqsPerVeh) {
+			this.init = init;
+			this.optim = optim;
+			this.load = load;
+			this.reqsPerVeh = reqsPerVeh;
+		}
+	};
 
-    enum Mode
-    {
-        OFFLINE_INIT_OPTIM(true, true, false, 99999), //
-        OFFLINE_INIT(true, false, false, 99999), //
-        OFFLINE_OPTIM(false, true, false, 99999), //
-        OFFLINE_LOAD(false, false, true, 99999), //
-        //
-        ONLINE_1(true, true, false, 1), //
-        ONLINE_2(true, true, false, 2), //
-        ONLINE_3(true, true, false, 3), //
-        ONLINE_4(true, true, false, 4), //
-        ONLINE_5(true, true, false, 5);
+	private final TaxiOptimizerContext optimContext;
+	private final PathTreeBasedTravelTimeCalculator pathTravelTimeCalc;
 
-        private final boolean init;
-        private final boolean optim;
-        private final boolean load;
-        private final int reqsPerVeh;//planning horizon
+	private SortedSet<TaxiRequest> unplannedRequests;
+	private MIPRequestData rData;
+	private VehicleData vData;
 
+	private MIPSolution initialSolution;
+	private MIPSolution finalSolution;
 
-        private Mode(boolean init, boolean optim, boolean load, int reqsPerVeh)
-        {
-            this.init = init;
-            this.optim = optim;
-            this.load = load;
-            this.reqsPerVeh = reqsPerVeh;
-        }
-    };
+	// static final Mode MODE = Mode.OFFLINE_INIT_OPTIM;
+	static final Mode MODE = Mode.ONLINE_1;
+	private final String workingDirectory = "";
 
+	public MIPProblem(TaxiOptimizerContext optimContext, PathTreeBasedTravelTimeCalculator pathTravelTimeCalc) {
+		this.optimContext = optimContext;
+		this.pathTravelTimeCalc = pathTravelTimeCalc;
+	}
 
-    private final TaxiOptimizerContext optimContext;
-    private final PathTreeBasedTravelTimeCalculator pathTravelTimeCalc;
+	public void scheduleUnplannedRequests(SortedSet<TaxiRequest> unplannedRequests) {
+		this.unplannedRequests = unplannedRequests;
 
-    private SortedSet<TaxiRequest> unplannedRequests;
-    private MIPRequestData rData;
-    private VehicleData vData;
+		if (!initDataAndCheckIfSchedulingRequired()) {
+			return;
+		}
 
-    private MIPSolution initialSolution;
-    private MIPSolution finalSolution;
+		if (MODE.init) {
+			findInitialSolution();
+		}
 
-    //static final Mode MODE = Mode.OFFLINE_INIT_OPTIM;
-    static final Mode MODE = Mode.ONLINE_1;
-    private final String workingDirectory = "";
+		if (MODE.optim) {
+			solveProblem();
+		} else if (MODE.load) {
+			loadSolution(workingDirectory + "gurobi_solution.sol");
+		} else if (MODE.init) {
+			finalSolution = initialSolution;
+		} else {
+			throw new RuntimeException();
+		}
 
+		scheduleSolution();
+	}
 
-    public MIPProblem(TaxiOptimizerContext optimContext,
-            PathTreeBasedTravelTimeCalculator pathTravelTimeCalc)
-    {
-        this.optimContext = optimContext;
-        this.pathTravelTimeCalc = pathTravelTimeCalc;
-    }
+	private boolean initDataAndCheckIfSchedulingRequired() {
+		vData = new VehicleData(optimContext, optimContext.fleet.getVehicles().values());
+		if (vData.getSize() == 0) {
+			return false;
+		}
 
+		rData = new MIPRequestData(optimContext, unplannedRequests, getPlanningHorizon());
+		return rData.dimension > 0;
+	}
 
-    public void scheduleUnplannedRequests(SortedSet<TaxiRequest> unplannedRequests)
-    {
-        this.unplannedRequests = unplannedRequests;
+	private MIPTaxiStats stats;
 
-        if (!initDataAndCheckIfSchedulingRequired()) {
-            return;
-        }
+	private void findInitialSolution() {
+		initialSolution = new MIPSolutionFinder(optimContext, rData, vData).findInitialSolution();
 
-        if (MODE.init) {
-            findInitialSolution();
-        }
+		stats = new MIPTaxiStats(optimContext.fleet);
+		stats.calcInitial();
 
-        if (MODE.optim) {
-            solveProblem();
-        }
-        else if (MODE.load) {
-            loadSolution(workingDirectory + "gurobi_solution.sol");
-        }
-        else if (MODE.init) {
-            finalSolution = initialSolution;
-        }
-        else {
-            throw new RuntimeException();
-        }
+		optimContext.scheduler.removeAwaitingRequestsFromAllSchedules();
+	}
 
-        scheduleSolution();
-    }
+	private void solveProblem() {
+		finalSolution = new MIPGurobiSolver(optimContext, pathTravelTimeCalc, rData, vData).solve(initialSolution);
+	}
 
+	private void scheduleSolution() {
+		new MIPSolutionScheduler(optimContext, rData, vData).updateSchedules(finalSolution);
+		unplannedRequests.removeAll(Arrays.asList(rData.requests));
 
-    private boolean initDataAndCheckIfSchedulingRequired()
-    {
-        vData = new VehicleData(optimContext, optimContext.fleet.getVehicles().values());
-        if (vData.getSize() == 0) {
-            return false;
-        }
+		stats.calcSolved();
 
-        rData = new MIPRequestData(optimContext, unplannedRequests, getPlanningHorizon());
-        return rData.dimension > 0;
-    }
+		PrintWriter pw = new PrintWriter(IOUtils.getBufferedWriter(workingDirectory + "MIP_stats"));
+		stats.print(pw);
+		pw.close();
+	}
 
+	private void loadSolution(String file) {
+		try (Scanner s = new Scanner(new File(file))) {
+			// header
+			if (!s.nextLine().startsWith("# Objective value = ")) {
+				throw new RuntimeException();
+			}
 
-    private MIPTaxiStats stats;
+			int n = rData.dimension;
+			int m = vData.getSize();
 
+			boolean[][] x = new boolean[m + n][m + n];
+			for (int u = 0; u < m + n; u++) {
+				for (int v = 0; v < m + n; v++) {
 
-    private void findInitialSolution()
-    {
-        initialSolution = new MIPSolutionFinder(optimContext, rData, vData).findInitialSolution();
+					// line format: x_430,430 0
+					if (!s.next().equals("x_" + u + "," + v)) {
+						throw new RuntimeException();
+					}
 
-        stats = new MIPTaxiStats(optimContext.fleet);
-        stats.calcInitial();
+					x[u][v] = s.nextDouble() >= 0.5;
+				}
+			}
 
-        optimContext.scheduler.removeAwaitingRequestsFromAllSchedules();
-    }
+			double[] w = new double[n];
+			for (int i = 0; i < n; i++) {
 
+				// line format: w_0 22096
+				if (!s.next().equals("w_" + i)) {
+					throw new RuntimeException();
+				}
 
-    private void solveProblem()
-    {
-        finalSolution = new MIPGurobiSolver(optimContext, pathTravelTimeCalc, rData, vData)
-                .solve(initialSolution);
-    }
+				w[i] = s.nextDouble();
+			}
 
+			finalSolution = new MIPSolution(x, w);
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-    private void scheduleSolution()
-    {
-        new MIPSolutionScheduler(optimContext, rData, vData).updateSchedules(finalSolution);
-        unplannedRequests.removeAll(Arrays.asList(rData.requests));
+	private int getPlanningHorizon() {
+		return vData.getSize() * MODE.reqsPerVeh;
+	}
 
-        stats.calcSolved();
+	private int getPlannedRequestCount() {
+		return rData.dimension;
+	}
 
-        PrintWriter pw = new PrintWriter(IOUtils.getBufferedWriter(workingDirectory + "MIP_stats"));
-        stats.print(pw);
-        pw.close();
-    }
-
-
-    private void loadSolution(String file)
-    {
-        try (Scanner s = new Scanner(new File(file))) {
-            //header
-            if (!s.nextLine().startsWith("# Objective value = ")) {
-                throw new RuntimeException();
-            }
-
-            int n = rData.dimension;
-            int m = vData.getSize();
-
-            boolean[][] x = new boolean[m + n][m + n];
-            for (int u = 0; u < m + n; u++) {
-                for (int v = 0; v < m + n; v++) {
-
-                    //line format: x_430,430 0
-                    if (!s.next().equals("x_" + u + "," + v)) {
-                        throw new RuntimeException();
-                    }
-
-                    x[u][v] = s.nextDouble() >= 0.5;
-                }
-            }
-
-            double[] w = new double[n];
-            for (int i = 0; i < n; i++) {
-
-                //line format: w_0 22096
-                if (!s.next().equals("w_" + i)) {
-                    throw new RuntimeException();
-                }
-
-                w[i] = s.nextDouble();
-            }
-
-            finalSolution = new MIPSolution(x, w);
-        }
-        catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    private int getPlanningHorizon()
-    {
-        return vData.getSize() * MODE.reqsPerVeh;
-    }
-
-
-    private int getPlannedRequestCount()
-    {
-        return rData.dimension;
-    }
-
-
-    boolean isPlanningHorizonFull()
-    {
-        return getPlanningHorizon() == getPlannedRequestCount();
-    }
+	boolean isPlanningHorizonFull() {
+		return getPlanningHorizon() == getPlannedRequestCount();
+	}
 }

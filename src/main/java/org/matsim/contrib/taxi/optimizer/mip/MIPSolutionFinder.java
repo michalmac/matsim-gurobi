@@ -23,67 +23,63 @@ import java.util.*;
 
 import org.matsim.contrib.dvrp.data.Requests;
 import org.matsim.contrib.dvrp.schedule.Schedule;
-import org.matsim.contrib.taxi.data.*;
+import org.matsim.contrib.taxi.data.TaxiRequest;
+import org.matsim.contrib.taxi.data.TaxiRequest.TaxiRequestStatus;
 import org.matsim.contrib.taxi.optimizer.*;
 import org.matsim.contrib.taxi.optimizer.fifo.FifoSchedulingProblem;
 import org.matsim.contrib.taxi.optimizer.mip.MIPProblem.MIPSolution;
-import org.matsim.contrib.taxi.schedule.*;
+import org.matsim.contrib.taxi.schedule.TaxiSchedules;
 
 import com.google.common.collect.Iterables;
 
+class MIPSolutionFinder {
+	private final TaxiOptimizerContext optimContext;
+	private final MIPRequestData rData;
+	private final VehicleData vData;
 
-class MIPSolutionFinder
-{
-    private final TaxiOptimizerContext optimContext;
-    private final MIPRequestData rData;
-    private final VehicleData vData;
+	MIPSolutionFinder(TaxiOptimizerContext optimContext, MIPRequestData rData, VehicleData vData) {
+		this.optimContext = optimContext;
+		this.rData = rData;
+		this.vData = vData;
+	}
 
+	MIPSolution findInitialSolution() {
+		final int m = vData.getSize();
+		final int n = rData.dimension;
 
-    MIPSolutionFinder(TaxiOptimizerContext optimContext, MIPRequestData rData, VehicleData vData)
-    {
-        this.optimContext = optimContext;
-        this.rData = rData;
-        this.vData = vData;
-    }
+		final boolean[][] x = new boolean[m + n][m + n];
+		final double[] w = new double[n];
 
+		Queue<TaxiRequest> queue = new PriorityQueue<>(n, Requests.T0_COMPARATOR);
+		Collections.addAll(queue, rData.requests);
 
-    MIPSolution findInitialSolution()
-    {
-        final int m = vData.getSize();
-        final int n = rData.dimension;
+		BestDispatchFinder dispatchFinder = new BestDispatchFinder(optimContext);
+		new FifoSchedulingProblem(optimContext, dispatchFinder).scheduleUnplannedRequests(queue);
 
-        final boolean[][] x = new boolean[m + n][m + n];
-        final double[] w = new double[n];
+		double t_P = optimContext.scheduler.getParams().pickupDuration;
 
-        Queue<TaxiRequest> queue = new PriorityQueue<>(n, Requests.T0_COMPARATOR);
-        Collections.addAll(queue, rData.requests);
+		for (int k = 0; k < m; k++) {
+			Schedule schedule = vData.getEntry(k).vehicle.getSchedule();
+			Iterable<TaxiRequest> reqs = TaxiSchedules.getTaxiRequests(schedule);
+			Iterable<TaxiRequest> plannedReqs = Iterables.filter(reqs,
+					req -> req.getStatus() == TaxiRequestStatus.PLANNED);
 
-        BestDispatchFinder dispatchFinder = new BestDispatchFinder(optimContext);
-        new FifoSchedulingProblem(optimContext, dispatchFinder).scheduleUnplannedRequests(queue);
+			int u = k;
+			for (TaxiRequest r : plannedReqs) {
+				int i = rData.reqIdToIdx.get(r.getId());
+				int v = m + i;
 
-        double t_P = optimContext.scheduler.getParams().pickupDuration;
+				x[u][v] = true;
 
-        for (int k = 0; k < m; k++) {
-            Schedule schedule = vData.getEntry(k).vehicle.getSchedule();
-            Iterable<TaxiRequest> reqs = TaxiSchedules.getTaxiRequests(schedule);
-            Iterable<TaxiRequest> plannedReqs = Iterables.filter(reqs, TaxiRequests.IS_PLANNED);
+				double w_i = r.getPickupTask().getEndTime() - t_P;
+				w[i] = w_i;
 
-            int u = k;
-            for (TaxiRequest r : plannedReqs) {
-                int i = rData.reqIdToIdx.get(r.getId());
-                int v = m + i;
+				u = v;
+			}
 
-                x[u][v] = true;
+			x[u][k] = true;
+		}
 
-                double w_i = r.getPickupTask().getEndTime() - t_P;
-                w[i] = w_i;
-
-                u = v;
-            }
-
-            x[u][k] = true;
-        }
-
-        return new MIPSolution(x, w);
-    }
+		return new MIPSolution(x, w);
+	}
 }

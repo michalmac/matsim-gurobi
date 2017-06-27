@@ -24,78 +24,56 @@ import java.io.PrintWriter;
 import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.taxi.util.stats.*;
 
+public class MIPTaxiStats {
+	// temporarily... not the cleanest design...
+	// public static MIPTaxiStats currentStats;
 
-public class MIPTaxiStats
-{
-    //temporarily... not the cleanest design...
-    //    public static MIPTaxiStats currentStats;
+	private final Fleet fleet;
 
-    private final Fleet fleet;
+	private TaxiStats initial;
+	private TaxiStats solved;
+	private TaxiStats simulated;
 
-    private TaxiStats initial;
-    private TaxiStats solved;
-    private TaxiStats simulated;
+	MIPTaxiStats(Fleet fleet) {
+		this.fleet = fleet;
+	}
 
+	void calcInitial() {
+		initial = calcTaxiStats();
+	}
 
-    MIPTaxiStats(Fleet fleet)
-    {
-        this.fleet = fleet;
-    }
+	void calcSolved() {
+		solved = calcTaxiStats();
+	}
 
+	public void calcSimulated() {
+		simulated = calcTaxiStats();
+	}
 
-    void calcInitial()
-    {
-        initial = calcTaxiStats();
-    }
+	public TaxiStats getInitial() {
+		return initial;
+	}
 
+	public TaxiStats getSolved() {
+		return solved;
+	}
 
-    void calcSolved()
-    {
-        solved = calcTaxiStats();
-    }
+	public TaxiStats getSimulated() {
+		return simulated;
+	}
 
+	public void print(PrintWriter pw) {
+		pw.println("state\t");
+		pw.println("initial\t" + statsToString(initial));
+		pw.println("solved\t" + statsToString(solved));
+		pw.println("simulated\t" + statsToString(simulated));
+	}
 
-    public void calcSimulated()
-    {
-        simulated = calcTaxiStats();
-    }
+	private String statsToString(TaxiStats stats) {
+		return stats == null ? "---" : (stats.passengerWaitTime.getMean() + "");
+	}
 
-
-    public TaxiStats getInitial()
-    {
-        return initial;
-    }
-
-
-    public TaxiStats getSolved()
-    {
-        return solved;
-    }
-
-
-    public TaxiStats getSimulated()
-    {
-        return simulated;
-    }
-
-
-    public void print(PrintWriter pw)
-    {
-        pw.println("state\t");
-        pw.println("initial\t" + statsToString(initial));
-        pw.println("solved\t" + statsToString(solved));
-        pw.println("simulated\t" + statsToString(simulated));
-    }
-
-
-    private String statsToString(TaxiStats stats)
-    {
-        return stats == null ? "---" : (stats.passengerWaitTime.getMean() + "");
-    }
-
-
-    private TaxiStats calcTaxiStats()
-    {
-        return new TaxiStatsCalculator(fleet.getVehicles().values()).getDailyStats();
-    }
+	private TaxiStats calcTaxiStats() {
+		return new TaxiStatsCalculator(fleet.getVehicles().values()).getDailyStats();
+	}
 }

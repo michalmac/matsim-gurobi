@@ -22,19 +22,14 @@ package org.matsim.contrib.taxi.optimizer.mip;
 import org.apache.commons.configuration.Configuration;
 import org.matsim.contrib.taxi.optimizer.AbstractTaxiOptimizerParams;
 
+public class MIPTaxiOptimizerParams extends AbstractTaxiOptimizerParams {
+	public static final String FIND_START_SOLUTION = "findStartSolution";
+	public static final String OPTIMIZE = "optimize";
+	public static final String LOAD = "load";
+	public static final String REQ_PER_VEH_PLANNING_HORIZON = "reqPerVehPlanningHorizon";
 
-public class MIPTaxiOptimizerParams
-    extends AbstractTaxiOptimizerParams
-{
-    public static final String FIND_START_SOLUTION = "findStartSolution";
-    public static final String OPTIMIZE = "optimize";
-    public static final String LOAD = "load";
-    public static final String REQ_PER_VEH_PLANNING_HORIZON = "reqPerVehPlanningHorizon";
-
-
-    public MIPTaxiOptimizerParams(Configuration optimizerConfig)
-    {
-        super(optimizerConfig);
-        throw new UnsupportedOperationException("Unused temporarily");
-    }
+	public MIPTaxiOptimizerParams(Configuration optimizerConfig) {
+		super(optimizerConfig);
+		throw new UnsupportedOperationException("Unused temporarily");
+	}
 }

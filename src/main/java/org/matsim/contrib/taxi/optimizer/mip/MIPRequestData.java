@@ -28,24 +28,18 @@ import org.matsim.contrib.taxi.optimizer.TaxiOptimizerContext;
 
 import com.google.common.collect.Iterables;
 
+class MIPRequestData {
+	final TaxiRequest[] requests;
+	final Map<Id<Request>, Integer> reqIdToIdx = new HashMap<>();
+	final int dimension;
 
-class MIPRequestData
-{
-    final TaxiRequest[] requests;
-    final Map<Id<Request>, Integer> reqIdToIdx = new HashMap<>();
-    final int dimension;
+	MIPRequestData(TaxiOptimizerContext optimContext, SortedSet<TaxiRequest> unplannedRequests, int planningHorizon) {
+		dimension = Math.min(planningHorizon, unplannedRequests.size());
 
+		requests = Iterables.toArray(Iterables.limit(unplannedRequests, dimension), TaxiRequest.class);
 
-    MIPRequestData(TaxiOptimizerContext optimContext, SortedSet<TaxiRequest> unplannedRequests,
-            int planningHorizon)
-    {
-        dimension = Math.min(planningHorizon, unplannedRequests.size());
-
-        requests = Iterables.toArray(Iterables.limit(unplannedRequests, dimension),
-                TaxiRequest.class);
-
-        for (int i = 0; i < dimension; i++) {
-            reqIdToIdx.put(requests[i].getId(), i);
-        }
-    }
+		for (int i = 0; i < dimension; i++) {
+			reqIdToIdx.put(requests[i].getId(), i);
+		}
+	}
 }
