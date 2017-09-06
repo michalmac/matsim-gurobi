@@ -56,7 +56,7 @@ class MIPSolutionFinder {
 		BestDispatchFinder dispatchFinder = new BestDispatchFinder(optimContext);
 		new FifoSchedulingProblem(optimContext, dispatchFinder).scheduleUnplannedRequests(queue);
 
-		double t_P = optimContext.scheduler.getParams().pickupDuration;
+		double t_P = optimContext.taxiCfg.getPickupDuration();
 
 		for (int k = 0; k < m; k++) {
 			Schedule schedule = vData.getEntry(k).vehicle.getSchedule();

@@ -23,7 +23,6 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.optimizer.*;
 import org.matsim.contrib.taxi.optimizer.mip.MIPProblem.MIPSolution;
-import org.matsim.contrib.taxi.scheduler.TaxiSchedulerParams;
 
 import gurobi.*;
 
@@ -222,9 +221,8 @@ class MIPGurobiSolver {
 	}
 
 	private void addReqToReqLinConstraint() throws GRBException {
-		TaxiSchedulerParams schedParams = optimContext.scheduler.getParams();
-		double t_P = schedParams.pickupDuration;
-		double t_D = schedParams.dropoffDuration;
+		double t_P = optimContext.taxiCfg.getPickupDuration();
+		double t_D = optimContext.taxiCfg.getDropoffDuration();
 
 		for (int i = 0; i < n; i++) {
 			TaxiRequest iReq = rData.requests[i];
