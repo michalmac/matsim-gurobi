@@ -1,16 +1,22 @@
 package org.matsim.contrib.taxi.optimizer.mip;
 
+import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.dvrp.data.Vehicle;
-import org.matsim.contrib.dvrp.path.*;
+import org.matsim.contrib.dvrp.path.VrpPathWithTravelData;
+import org.matsim.contrib.dvrp.path.VrpPaths;
 import org.matsim.contrib.dvrp.router.DijkstraWithThinPath;
 import org.matsim.contrib.dvrp.util.LinkTimePair;
 import org.matsim.contrib.taxi.data.TaxiRequest;
-import org.matsim.contrib.taxi.optimizer.*;
+import org.matsim.contrib.taxi.optimizer.VehicleData;
 import org.matsim.contrib.taxi.optimizer.mip.MIPProblem.MIPSolution;
+import org.matsim.contrib.taxi.scheduler.TaxiScheduler;
 import org.matsim.core.router.util.LeastCostPathCalculator;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 
 class MIPSolutionScheduler {
-	private final TaxiOptimizerContext optimContext;
+	private final TaxiScheduler scheduler;
+	private final TravelTime travelTime;
 	private final MIPRequestData rData;
 	private final VehicleData vData;
 
@@ -22,14 +28,16 @@ class MIPSolutionScheduler {
 	private MIPSolution solution;
 	private Vehicle currentVeh;
 
-	MIPSolutionScheduler(TaxiOptimizerContext optimContext, MIPRequestData rData, VehicleData vData) {
-		this.optimContext = optimContext;
+	MIPSolutionScheduler(TaxiScheduler scheduler, Network network, TravelTime travelTime,
+			TravelDisutility travelDisutility, MIPRequestData rData, VehicleData vData) {
+		this.scheduler = scheduler;
+		this.travelTime = travelTime;
 		this.rData = rData;
 		this.vData = vData;
 		this.m = vData.getSize();
 		this.n = rData.dimension;
 
-		router = new DijkstraWithThinPath(optimContext.network, optimContext.travelDisutility, optimContext.travelTime);
+		router = new DijkstraWithThinPath(network, travelDisutility, travelTime);
 	}
 
 	void updateSchedules(MIPSolution solution) {
@@ -53,7 +61,7 @@ class MIPSolutionScheduler {
 	}
 
 	private void appendRequestToCurrentVehicle(int i) {
-		LinkTimePair earliestDeparture = optimContext.scheduler.getEarliestIdleness(currentVeh);
+		LinkTimePair earliestDeparture = scheduler.getEarliestIdleness(currentVeh);
 		TaxiRequest req = rData.requests[i];
 
 		// use earliestDeparture.time instead of w[i]-tt (latest departure time) due to:
@@ -63,8 +71,8 @@ class MIPSolutionScheduler {
 		// (because tt in MIP are based on the free flow speed estimates, while the actual
 		// times are usually longer hence the vehicle is likely to arrive after w[i])
 		VrpPathWithTravelData path = VrpPaths.calcAndCreatePath(earliestDeparture.link, req.getFromLink(),
-				earliestDeparture.time, router, optimContext.travelTime);
+				earliestDeparture.time, router, travelTime);
 
-		optimContext.scheduler.scheduleRequest(currentVeh, req, path);
+		scheduler.scheduleRequest(currentVeh, req, path);
 	}
 }

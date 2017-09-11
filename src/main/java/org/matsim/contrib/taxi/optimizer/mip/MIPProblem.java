@@ -19,11 +19,22 @@
 
 package org.matsim.contrib.taxi.optimizer.mip;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.SortedSet;
 
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.taxi.data.TaxiRequest;
-import org.matsim.contrib.taxi.optimizer.*;
+import org.matsim.contrib.taxi.optimizer.VehicleData;
+import org.matsim.contrib.taxi.run.TaxiConfigGroup;
+import org.matsim.contrib.taxi.scheduler.TaxiScheduler;
+import org.matsim.core.mobsim.framework.MobsimTimer;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.utils.io.IOUtils;
 
 public class MIPProblem {
@@ -62,7 +73,13 @@ public class MIPProblem {
 		}
 	};
 
-	private final TaxiOptimizerContext optimContext;
+	private final TaxiConfigGroup taxiCfg;
+	private final Fleet fleet;
+	private final Network network;
+	private final MobsimTimer timer;
+	private final TravelTime travelTime;
+	private final TravelDisutility travelDisutility;
+	private final TaxiScheduler scheduler;
 	private final PathTreeBasedTravelTimeCalculator pathTravelTimeCalc;
 
 	private SortedSet<TaxiRequest> unplannedRequests;
@@ -76,8 +93,16 @@ public class MIPProblem {
 	static final Mode MODE = Mode.ONLINE_1;
 	private final String workingDirectory = "";
 
-	public MIPProblem(TaxiOptimizerContext optimContext, PathTreeBasedTravelTimeCalculator pathTravelTimeCalc) {
-		this.optimContext = optimContext;
+	public MIPProblem(TaxiConfigGroup taxiCfg, Fleet fleet, TaxiScheduler scheduler, Network network, MobsimTimer timer,
+			TravelTime travelTime, TravelDisutility travelDisutility,
+			PathTreeBasedTravelTimeCalculator pathTravelTimeCalc) {
+		this.taxiCfg = taxiCfg;
+		this.fleet = fleet;
+		this.scheduler = scheduler;
+		this.network = network;
+		this.timer = timer;
+		this.travelTime = travelTime;
+		this.travelDisutility = travelDisutility;
 		this.pathTravelTimeCalc = pathTravelTimeCalc;
 	}
 
@@ -106,32 +131,34 @@ public class MIPProblem {
 	}
 
 	private boolean initDataAndCheckIfSchedulingRequired() {
-		vData = new VehicleData(optimContext, optimContext.fleet.getVehicles().values());
+		vData = new VehicleData(timer.getTimeOfDay(), scheduler, fleet.getVehicles().values());
 		if (vData.getSize() == 0) {
 			return false;
 		}
 
-		rData = new MIPRequestData(optimContext, unplannedRequests, getPlanningHorizon());
+		rData = new MIPRequestData(unplannedRequests, getPlanningHorizon());
 		return rData.dimension > 0;
 	}
 
 	private MIPTaxiStats stats;
 
 	private void findInitialSolution() {
-		initialSolution = new MIPSolutionFinder(optimContext, rData, vData).findInitialSolution();
+		initialSolution = new MIPSolutionFinder(taxiCfg, fleet, scheduler, network, timer, travelTime, travelDisutility,
+				rData, vData).findInitialSolution();
 
-		stats = new MIPTaxiStats(optimContext.fleet);
+		stats = new MIPTaxiStats(fleet);
 		stats.calcInitial();
 
-		optimContext.scheduler.removeAwaitingRequestsFromAllSchedules();
+		scheduler.removeAwaitingRequestsFromAllSchedules();
 	}
 
 	private void solveProblem() {
-		finalSolution = new MIPGurobiSolver(optimContext, pathTravelTimeCalc, rData, vData).solve(initialSolution);
+		finalSolution = new MIPGurobiSolver(taxiCfg, pathTravelTimeCalc, rData, vData).solve(initialSolution);
 	}
 
 	private void scheduleSolution() {
-		new MIPSolutionScheduler(optimContext, rData, vData).updateSchedules(finalSolution);
+		new MIPSolutionScheduler(scheduler, network, travelTime, travelDisutility, rData, vData)
+				.updateSchedules(finalSolution);
 		unplannedRequests.removeAll(Arrays.asList(rData.requests));
 
 		stats.calcSolved();

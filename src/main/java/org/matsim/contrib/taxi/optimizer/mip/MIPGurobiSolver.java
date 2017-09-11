@@ -23,6 +23,7 @@ import org.matsim.api.core.v01.network.Link;
 import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.optimizer.*;
 import org.matsim.contrib.taxi.optimizer.mip.MIPProblem.MIPSolution;
+import org.matsim.contrib.taxi.run.TaxiConfigGroup;
 
 import gurobi.*;
 
@@ -45,7 +46,7 @@ class MIPGurobiSolver {
 	private static final double TW_MAX = 1.5 * 60 * 60;// 1.5 hours (Mielec)
 	private static final double TP_MAX = 20 * 60;// 20 minutes (Mielec)
 
-	private final TaxiOptimizerContext optimContext;
+	private final TaxiConfigGroup taxiCfg;
 	private final PathTreeBasedTravelTimeCalculator pathTravelTimeCalc;
 	private final MIPRequestData rData;
 	private final VehicleData vData;
@@ -59,9 +60,9 @@ class MIPGurobiSolver {
 	// private final Mode mode = Mode.OFFLINE;
 	private final Mode mode = Mode.ONLINE;
 
-	MIPGurobiSolver(TaxiOptimizerContext optimContext, PathTreeBasedTravelTimeCalculator pathTravelTimeCalc,
+	MIPGurobiSolver(TaxiConfigGroup taxiCfg, PathTreeBasedTravelTimeCalculator pathTravelTimeCalc,
 			MIPRequestData rData, VehicleData vData) {
-		this.optimContext = optimContext;
+		this.taxiCfg = taxiCfg;
 		this.pathTravelTimeCalc = pathTravelTimeCalc;
 		this.rData = rData;
 		this.vData = vData;
@@ -221,8 +222,8 @@ class MIPGurobiSolver {
 	}
 
 	private void addReqToReqLinConstraint() throws GRBException {
-		double t_P = optimContext.taxiCfg.getPickupDuration();
-		double t_D = optimContext.taxiCfg.getDropoffDuration();
+		double t_P = taxiCfg.getPickupDuration();
+		double t_D = taxiCfg.getDropoffDuration();
 
 		for (int i = 0; i < n; i++) {
 			TaxiRequest iReq = rData.requests[i];

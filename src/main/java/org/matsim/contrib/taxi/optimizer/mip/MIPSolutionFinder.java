@@ -19,26 +19,50 @@
 
 package org.matsim.contrib.taxi.optimizer.mip;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.PriorityQueue;
+import java.util.Queue;
 
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.dvrp.data.Requests;
 import org.matsim.contrib.dvrp.schedule.Schedule;
 import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.data.TaxiRequest.TaxiRequestStatus;
-import org.matsim.contrib.taxi.optimizer.*;
+import org.matsim.contrib.taxi.optimizer.BestDispatchFinder;
+import org.matsim.contrib.taxi.optimizer.VehicleData;
 import org.matsim.contrib.taxi.optimizer.fifo.FifoSchedulingProblem;
 import org.matsim.contrib.taxi.optimizer.mip.MIPProblem.MIPSolution;
+import org.matsim.contrib.taxi.run.TaxiConfigGroup;
 import org.matsim.contrib.taxi.schedule.TaxiSchedules;
+import org.matsim.contrib.taxi.scheduler.TaxiScheduler;
+import org.matsim.core.mobsim.framework.MobsimTimer;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 
 import com.google.common.collect.Iterables;
 
 class MIPSolutionFinder {
-	private final TaxiOptimizerContext optimContext;
+	private final TaxiConfigGroup taxiCfg;
+	private final TaxiScheduler scheduler;
+	private final Fleet fleet;
+	private final Network network;
+	private final MobsimTimer mobsimTimer;
+	private final TravelTime travelTime;
+	private final TravelDisutility travelDisutility;
 	private final MIPRequestData rData;
 	private final VehicleData vData;
 
-	MIPSolutionFinder(TaxiOptimizerContext optimContext, MIPRequestData rData, VehicleData vData) {
-		this.optimContext = optimContext;
+	MIPSolutionFinder(TaxiConfigGroup taxiCfg, Fleet fleet, TaxiScheduler scheduler, Network network,
+			MobsimTimer mobsimTimer, TravelTime travelTime, TravelDisutility travelDisutility, MIPRequestData rData,
+			VehicleData vData) {
+		this.taxiCfg = taxiCfg;
+		this.scheduler = scheduler;
+		this.fleet = fleet;
+		this.network = network;
+		this.mobsimTimer = mobsimTimer;
+		this.travelTime = travelTime;
+		this.travelDisutility = travelDisutility;
 		this.rData = rData;
 		this.vData = vData;
 	}
@@ -53,10 +77,11 @@ class MIPSolutionFinder {
 		Queue<TaxiRequest> queue = new PriorityQueue<>(n, Requests.T0_COMPARATOR);
 		Collections.addAll(queue, rData.requests);
 
-		BestDispatchFinder dispatchFinder = new BestDispatchFinder(optimContext);
-		new FifoSchedulingProblem(optimContext, dispatchFinder).scheduleUnplannedRequests(queue);
+		BestDispatchFinder dispatchFinder = new BestDispatchFinder(scheduler, network, mobsimTimer, travelTime,
+				travelDisutility);
+		new FifoSchedulingProblem(fleet, scheduler, dispatchFinder).scheduleUnplannedRequests(queue);
 
-		double t_P = optimContext.taxiCfg.getPickupDuration();
+		double t_P = taxiCfg.getPickupDuration();
 
 		for (int k = 0; k < m; k++) {
 			Schedule schedule = vData.getEntry(k).vehicle.getSchedule();

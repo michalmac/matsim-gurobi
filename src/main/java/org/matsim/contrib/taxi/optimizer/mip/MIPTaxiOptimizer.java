@@ -19,19 +19,33 @@
 
 package org.matsim.contrib.taxi.optimizer.mip;
 
-import java.util.*;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
+import org.matsim.api.core.v01.network.Network;
+import org.matsim.contrib.dvrp.data.Fleet;
 import org.matsim.contrib.dvrp.data.Requests;
-import org.matsim.contrib.dvrp.router.*;
+import org.matsim.contrib.dvrp.router.DijkstraWithDijkstraTreeCache;
+import org.matsim.contrib.dvrp.router.TimeAsTravelDisutility;
 import org.matsim.contrib.dvrp.util.TimeDiscretizer;
 import org.matsim.contrib.taxi.data.TaxiRequest;
-import org.matsim.contrib.taxi.optimizer.*;
+import org.matsim.contrib.taxi.optimizer.AbstractTaxiOptimizer;
+import org.matsim.contrib.taxi.run.TaxiConfigGroup;
 import org.matsim.contrib.taxi.schedule.TaxiTask;
 import org.matsim.contrib.taxi.schedule.TaxiTask.TaxiTaskType;
-import org.matsim.core.router.util.*;
+import org.matsim.contrib.taxi.scheduler.TaxiScheduler;
+import org.matsim.core.mobsim.framework.MobsimTimer;
+import org.matsim.core.router.util.TravelDisutility;
+import org.matsim.core.router.util.TravelTime;
 import org.matsim.core.trafficmonitoring.FreeSpeedTravelTime;
 
 public class MIPTaxiOptimizer extends AbstractTaxiOptimizer {
+	private final TaxiConfigGroup taxiCfg;
+	private final Network network;
+	private final MobsimTimer timer;
+	private final TravelTime travelTime;
+	private final TravelDisutility travelDisutility;
+
 	private final PathTreeBasedTravelTimeCalculator pathTreeTravelTimeCalc;
 
 	private boolean wasLastPlanningHorizonFull = false;// in order to run optimization for the first request
@@ -39,19 +53,26 @@ public class MIPTaxiOptimizer extends AbstractTaxiOptimizer {
 
 	private int optimCounter = 0;
 
-	public MIPTaxiOptimizer(TaxiOptimizerContext optimContext, MIPTaxiOptimizerParams params) {
-		super(optimContext, params, new TreeSet<TaxiRequest>(Requests.ABSOLUTE_COMPARATOR), true, true);
+	public MIPTaxiOptimizer(TaxiConfigGroup taxiCfg, Fleet fleet, TaxiScheduler scheduler, Network network,
+			MobsimTimer timer, TravelTime travelTime, TravelDisutility travelDisutility,
+			MIPTaxiOptimizerParams params) {
+		super(taxiCfg, fleet, scheduler, params, new TreeSet<TaxiRequest>(Requests.ABSOLUTE_COMPARATOR), true, true);
+		this.taxiCfg = taxiCfg;
+		this.network = network;
+		this.timer = timer;
+		this.travelTime = travelTime;
+		this.travelDisutility = travelDisutility;
 
-		if (!optimContext.taxiCfg.isDestinationKnown()) {
+		if (!taxiCfg.isDestinationKnown()) {
 			throw new IllegalArgumentException("Destinations must be known ahead");
 		}
 
 		// TODO should they be taken from optimContext????; what to used then in TaxiScheduler?
-		TravelTime travelTime = new FreeSpeedTravelTime();
-		TravelDisutility travelDisutility = new TimeAsTravelDisutility(travelTime);
+		TravelTime treeTravelTime = new FreeSpeedTravelTime();
+		TravelDisutility treeTravelDisutility = new TimeAsTravelDisutility(travelTime);
 
-		pathTreeTravelTimeCalc = new PathTreeBasedTravelTimeCalculator(new DijkstraWithDijkstraTreeCache(
-				optimContext.network, travelDisutility, travelTime, TimeDiscretizer.CYCLIC_24_HOURS));
+		pathTreeTravelTimeCalc = new PathTreeBasedTravelTimeCalculator(new DijkstraWithDijkstraTreeCache(network,
+				treeTravelDisutility, treeTravelTime, TimeDiscretizer.CYCLIC_24_HOURS));
 	}
 
 	@Override
@@ -67,12 +88,13 @@ public class MIPTaxiOptimizer extends AbstractTaxiOptimizer {
 			return;
 		}
 
-		MIPProblem mipProblem = new MIPProblem(getOptimContext(), pathTreeTravelTimeCalc);
+		MIPProblem mipProblem = new MIPProblem(taxiCfg, getFleet(), getScheduler(), network, timer, travelTime,
+				travelDisutility, pathTreeTravelTimeCalc);
 		mipProblem.scheduleUnplannedRequests((SortedSet<TaxiRequest>)getUnplannedRequests());
 
 		optimCounter++;
 		if (optimCounter % 10 == 0) {
-			System.err.println(optimCounter + "; time=" + getOptimContext().timer.getTimeOfDay());
+			System.err.println(optimCounter + "; time=" + timer.getTimeOfDay());
 		}
 
 		wasLastPlanningHorizonFull = mipProblem.isPlanningHorizonFull();

@@ -19,12 +19,13 @@
 
 package org.matsim.contrib.taxi.optimizer.mip;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedSet;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.contrib.dvrp.data.Request;
 import org.matsim.contrib.taxi.data.TaxiRequest;
-import org.matsim.contrib.taxi.optimizer.TaxiOptimizerContext;
 
 import com.google.common.collect.Iterables;
 
@@ -33,7 +34,7 @@ class MIPRequestData {
 	final Map<Id<Request>, Integer> reqIdToIdx = new HashMap<>();
 	final int dimension;
 
-	MIPRequestData(TaxiOptimizerContext optimContext, SortedSet<TaxiRequest> unplannedRequests, int planningHorizon) {
+	MIPRequestData(SortedSet<TaxiRequest> unplannedRequests, int planningHorizon) {
 		dimension = Math.min(planningHorizon, unplannedRequests.size());
 
 		requests = Iterables.toArray(Iterables.limit(unplannedRequests, dimension), TaxiRequest.class);
