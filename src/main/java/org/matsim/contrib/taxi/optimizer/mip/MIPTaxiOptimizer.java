@@ -19,11 +19,7 @@
 
 package org.matsim.contrib.taxi.optimizer.mip;
 
-import java.util.TreeSet;
-
 import org.matsim.contrib.dvrp.data.Fleet;
-import org.matsim.contrib.dvrp.data.Requests;
-import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.optimizer.DefaultTaxiOptimizer;
 import org.matsim.contrib.taxi.run.TaxiConfigGroup;
 import org.matsim.contrib.taxi.schedule.TaxiTask;
@@ -35,8 +31,7 @@ public class MIPTaxiOptimizer extends DefaultTaxiOptimizer {
 
 	public MIPTaxiOptimizer(TaxiConfigGroup taxiCfg, Fleet fleet, TaxiScheduler scheduler,
 			MIPTaxiOptimizerParams params, MIPRequestInserter requestInserter) {
-		super(taxiCfg, fleet, scheduler, params, requestInserter,
-				new TreeSet<TaxiRequest>(Requests.ABSOLUTE_COMPARATOR), true, true);
+		super(taxiCfg, fleet, scheduler, params, requestInserter);
 
 		this.requestInserter = requestInserter;
 
