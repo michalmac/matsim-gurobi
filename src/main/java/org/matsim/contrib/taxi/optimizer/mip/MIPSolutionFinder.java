@@ -22,10 +22,11 @@ package org.matsim.contrib.taxi.optimizer.mip;
 import java.util.Collections;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.stream.Stream;
 
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.dvrp.data.Fleet;
-import org.matsim.contrib.dvrp.data.Requests;
+import org.matsim.contrib.dvrp.passenger.PassengerRequests;
 import org.matsim.contrib.dvrp.schedule.Schedule;
 import org.matsim.contrib.taxi.data.TaxiRequest;
 import org.matsim.contrib.taxi.data.TaxiRequest.TaxiRequestStatus;
@@ -39,8 +40,6 @@ import org.matsim.contrib.taxi.scheduler.TaxiScheduler;
 import org.matsim.core.mobsim.framework.MobsimTimer;
 import org.matsim.core.router.util.TravelDisutility;
 import org.matsim.core.router.util.TravelTime;
-
-import com.google.common.collect.Iterables;
 
 class MIPSolutionFinder {
 	private final TaxiConfigGroup taxiCfg;
@@ -74,7 +73,7 @@ class MIPSolutionFinder {
 		final boolean[][] x = new boolean[m + n][m + n];
 		final double[] w = new double[n];
 
-		Queue<TaxiRequest> queue = new PriorityQueue<>(n, Requests.T0_COMPARATOR);
+		Queue<TaxiRequest> queue = new PriorityQueue<>(n, PassengerRequests.EARLIEST_START_TIME_COMPARATOR);
 		Collections.addAll(queue, rData.requests);
 
 		BestDispatchFinder dispatchFinder = new BestDispatchFinder(scheduler, network, mobsimTimer, travelTime,
@@ -85,12 +84,11 @@ class MIPSolutionFinder {
 
 		for (int k = 0; k < m; k++) {
 			Schedule schedule = vData.getEntry(k).vehicle.getSchedule();
-			Iterable<TaxiRequest> reqs = TaxiSchedules.getTaxiRequests(schedule);
-			Iterable<TaxiRequest> plannedReqs = Iterables.filter(reqs,
-					req -> req.getStatus() == TaxiRequestStatus.PLANNED);
+			Stream<TaxiRequest> plannedReqs = TaxiSchedules.getTaxiRequests(schedule)
+					.filter(r -> r.getStatus() == TaxiRequestStatus.PLANNED);
 
 			int u = k;
-			for (TaxiRequest r : plannedReqs) {
+			for (TaxiRequest r : (Iterable<TaxiRequest>)plannedReqs::iterator) {
 				int i = rData.reqIdToIdx.get(r.getId());
 				int v = m + i;
 

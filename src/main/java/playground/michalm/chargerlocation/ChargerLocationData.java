@@ -19,20 +19,14 @@
 
 package playground.michalm.chargerlocation;
 
-import java.util.List;
-
 import org.matsim.api.core.v01.BasicLocation;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 
+public class ChargerLocationData<C extends BasicLocation<C>> {
+	public final ImmutableList<C> locations;
 
-public class ChargerLocationData<C extends BasicLocation<C>>
-{
-    public final List<C> locations;
-
-
-    public ChargerLocationData(Iterable<C> basicLocations)
-    {
-        locations = Lists.newArrayList(basicLocations);
-    }
+	public ChargerLocationData(ImmutableList<C> basicLocations) {
+		locations = basicLocations;
+	}
 }

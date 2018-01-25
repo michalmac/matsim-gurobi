@@ -131,7 +131,7 @@ public class MIPProblem {
 	}
 
 	private boolean initDataAndCheckIfSchedulingRequired() {
-		vData = new VehicleData(timer.getTimeOfDay(), scheduler, fleet.getVehicles().values());
+		vData = new VehicleData(timer.getTimeOfDay(), scheduler, fleet.getVehicles().values().stream());
 		if (vData.getSize() == 0) {
 			return false;
 		}
