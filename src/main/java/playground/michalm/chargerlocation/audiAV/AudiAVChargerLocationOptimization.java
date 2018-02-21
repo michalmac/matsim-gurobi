@@ -27,7 +27,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
 import org.matsim.contrib.util.CSVReaders;
-import org.matsim.contrib.util.distance.DistanceCalculators;
+import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
@@ -111,9 +111,8 @@ public class AudiAVChargerLocationOptimization {
 		ChargerLocationData<Zone> chargerData = new ChargerLocationData<>(ImmutableList.copyOf(zones.values()));
 
 		double totalEnergyRequired = VEHICLES * SOC_RECHARGE;
-		problem = new ChargerLocationProblem(demandData, chargerData, DistanceCalculators.BEELINE_DISTANCE_CALCULATOR,
-				eScenario.hours, eScenario.chargePower_kW, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE,
-				MAX_CHARGERS_PER_ZONE);
+		problem = new ChargerLocationProblem(demandData, chargerData, DistanceUtils::calculateDistance, eScenario.hours,
+				eScenario.chargePower_kW, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
 	}
 
 	private DemandData<Link> createDemandData(Map<Id<Link>, Link> links, String potentialFile) {

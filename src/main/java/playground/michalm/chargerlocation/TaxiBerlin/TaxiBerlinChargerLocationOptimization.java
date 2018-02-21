@@ -27,7 +27,7 @@ import java.util.Scanner;
 import org.apache.commons.lang3.StringUtils;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Network;
-import org.matsim.contrib.util.distance.DistanceCalculators;
+import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.io.MatsimNetworkReader;
@@ -103,8 +103,8 @@ public class TaxiBerlinChargerLocationOptimization {
 		double totalEnergyRequired = VEHICLE_HOURS / HOURS
 				* Math.max(eScenario.energyPerVehicle_kWh - (rechargeBeforeEnd ? 0 : DELTA_SOC), 0);
 
-		problem = new ChargerLocationProblem(demandData, chargerData, DistanceCalculators.BEELINE_DISTANCE_CALCULATOR,
-				HOURS, eScenario.chargePower_kW, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
+		problem = new ChargerLocationProblem(demandData, chargerData, DistanceUtils::calculateDistance, HOURS,
+				eScenario.chargePower_kW, totalEnergyRequired, OVERSUPPLY, MAX_DISTANCE, MAX_CHARGERS_PER_ZONE);
 	}
 
 	private DemandData<Zone> createDemandData(Map<Id<Zone>, Zone> zones, String potentialFile) {
