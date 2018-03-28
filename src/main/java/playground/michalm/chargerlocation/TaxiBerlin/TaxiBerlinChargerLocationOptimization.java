@@ -27,6 +27,8 @@ import java.util.Scanner;
 import org.apache.commons.lang3.StringUtils;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.vsp.ev.data.Charger;
+import org.matsim.vsp.ev.data.file.ChargerWriter;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.contrib.zone.Zone;
 import org.matsim.core.network.NetworkUtils;
@@ -42,8 +44,6 @@ import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocation
 import playground.michalm.chargerlocation.ChargerLocationSolutionWriter;
 import playground.michalm.chargerlocation.ChargerLocationSolver;
 import playground.michalm.chargerlocation.DemandData;
-import playground.michalm.ev.data.Charger;
-import playground.michalm.ev.data.file.ChargerWriter;
 
 public class TaxiBerlinChargerLocationOptimization {
 	private static final int VEHICLE_HOURS = 32064;// ANT'15 paper (Tue 4am - Wed 4am, 16-17 Apr 2014)

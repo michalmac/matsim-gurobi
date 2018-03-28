@@ -23,6 +23,8 @@ import java.util.*;
 
 import org.matsim.api.core.v01.*;
 import org.matsim.api.core.v01.network.*;
+import org.matsim.vsp.ev.EvUnitConversions;
+import org.matsim.vsp.ev.data.*;
 import org.matsim.contrib.util.CompactCSVWriter;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
@@ -30,8 +32,6 @@ import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.core.utils.io.IOUtils;
 
 import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocationSolution;
-import playground.michalm.ev.EvUnitConversions;
-import playground.michalm.ev.data.*;
 
 
 public class ChargerLocationSolutionWriter

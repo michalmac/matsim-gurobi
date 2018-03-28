@@ -26,6 +26,8 @@ import java.util.Map;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.network.Network;
+import org.matsim.vsp.ev.data.Charger;
+import org.matsim.vsp.ev.data.file.ChargerWriter;
 import org.matsim.contrib.util.CSVReaders;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.contrib.zone.Zone;
@@ -41,8 +43,6 @@ import playground.michalm.chargerlocation.ChargerLocationProblem.ChargerLocation
 import playground.michalm.chargerlocation.ChargerLocationSolutionWriter;
 import playground.michalm.chargerlocation.ChargerLocationSolver;
 import playground.michalm.chargerlocation.DemandData;
-import playground.michalm.ev.data.Charger;
-import playground.michalm.ev.data.file.ChargerWriter;
 
 public class AudiAVChargerLocationOptimization {
 	// private static final int VEHICLES = 100_000;//100% scenario (ANT'16 paper)
